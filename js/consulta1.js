@@ -40,7 +40,8 @@ async function cargarDatosSeccion() {
   const municipio = document.getElementById('municipio').value;
   if (!filtro) return;
 
-  const secciones = await window.api.getSecciones(filtro);
+  const seccionBase = filtro.match(/^\d+/)?.[0] || filtro;
+  const secciones = await window.api.getSecciones(seccionBase);
   const contenedor = document.getElementById('lista-secciones');
   contenedor.innerHTML = '';
 

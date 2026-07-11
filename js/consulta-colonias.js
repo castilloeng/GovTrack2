@@ -65,8 +65,9 @@ async function seleccionarColonia() {
   const partes = coloniaSeleccionadaTexto.split(" - ");
   const coloniaNombre = partes[0].trim(); // primera parte = nombre de la colonia
 
-  // Obtener datos de la sección
-  const secciones = await window.api.getSecciones(seccionSeleccionada);
+  // Obtener datos de la sección (extraer solo la parte numérica para secciones compuestas)
+  const seccionBase = seccionSeleccionada.match(/^\d+/)?.[0] || seccionSeleccionada;
+  const secciones = await window.api.getSecciones(seccionBase);
   const contenedor = document.getElementById('datos-seccion');
   contenedor.innerHTML = '';
 
