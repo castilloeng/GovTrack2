@@ -2,10 +2,22 @@ let contactos = [];        // arreglo global
 let paginaActual = 1;
 const registrosPorPagina = 15;
 
+async function cargarMunicipios() {
+  const municipios = await window.api.getColoniasMunicipios();
+  const select = document.getElementById('filtro-municipio');
+  municipios.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.MUNICIPIO;
+    option.textContent = m.MUNICIPIO;
+    select.appendChild(option);
+  });
+}
+
 async function cargarContactos() {
   const filtro = document.getElementById('filtro').value;
-  contactos = await window.api.getContactos(filtro); // guardamos en el global
-  mostrarPagina(1); // mostramos la primera página
+  const municipio = document.getElementById('filtro-municipio').value;
+  contactos = await window.api.getContactos({ filtro, municipio });
+  mostrarPagina(1);
 }
 
 function mostrarPagina(pagina) {
@@ -72,4 +84,5 @@ function renderPaginacion() {
 
 
 // cargar todos al inicio
+cargarMunicipios();
 cargarContactos();

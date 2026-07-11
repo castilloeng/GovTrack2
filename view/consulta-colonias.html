@@ -16,6 +16,14 @@
 
   <h1 class="mb-4">Consulta de Colonias y Líderes</h1>
 
+  <!-- Filtro Municipio -->
+  <div class="mb-3">
+    <label for="municipio" class="form-label">Municipio:</label>
+    <select id="municipio" class="form-select" onchange="cargarColonias()">
+      <option value="">Todos los municipios</option>
+    </select>
+  </div>
+
   <!-- Selector de Colonia -->
   <div class="mb-3">
     <label for="colonia" class="form-label">Colonia:</label>

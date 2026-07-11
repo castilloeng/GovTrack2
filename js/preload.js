@@ -1,10 +1,12 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
-  getContactos: (filtro) => ipcRenderer.invoke('get-contactos', filtro),
+  getContactos: (params) => ipcRenderer.invoke('get-contactos', params),
   getSecciones: (filtro) => ipcRenderer.invoke('get-secciones', filtro),
-  getColonias: (filtro) => ipcRenderer.invoke('get-colonias', filtro),
-  getColonias2: (filtro) => ipcRenderer.invoke('get-colonias2', filtro),
+  getColonias: (params) => ipcRenderer.invoke('get-colonias', params),
+  getSeccionesPorMunicipio: (municipio) => ipcRenderer.invoke('get-secciones-por-municipio', municipio),
+  getColonias2: (params) => ipcRenderer.invoke('get-colonias2', params),
+  getColoniasMunicipios: () => ipcRenderer.invoke('get-colonias-municipios'),
   getLideres: (filtro) => ipcRenderer.invoke('get-lideres', filtro),
   getLideres2: (colonia, seccion) => ipcRenderer.invoke('get-lideres2', { colonia, seccion }),
   getContactosDet: (filtro) => ipcRenderer.invoke('get-contactosdet', filtro),

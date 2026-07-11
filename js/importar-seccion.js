@@ -156,6 +156,7 @@ async function importarDatos() {
   }
 
   const duplicateAction = document.getElementById('duplicate-action').value;
+  const fixedMunicipio = document.getElementById('fixed-municipio').value.trim();
 
   const btn = document.getElementById('btn-importar');
   btn.disabled = true;
@@ -166,7 +167,8 @@ async function importarDatos() {
       filePath: currentFilePath,
       sheetName: currentSheetName,
       mapping,
-      duplicateAction
+      duplicateAction,
+      fixedMunicipio
     });
 
     const section = document.getElementById('result-section');
@@ -213,6 +215,7 @@ function resetear() {
   document.getElementById('preview-headers').innerHTML = '';
   document.getElementById('preview-rows').innerHTML = '';
   document.getElementById('mapping-container').innerHTML = '';
+  document.getElementById('fixed-municipio').value = '';
   document.getElementById('result-section').style.display = 'none';
   document.getElementById('result-section').innerHTML = '';
   document.getElementById('btn-importar').disabled = false;

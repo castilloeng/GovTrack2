@@ -5,9 +5,15 @@ const db = require('./db');
 
 function setupIpcHandlers() {
 // --- Lectura de Contactos con filtro ---
-ipcMain.handle('get-contactos', (event, filtro) => {
-  if (filtro && filtro.trim() !== "") {
+ipcMain.handle('get-contactos', (event, params) => {
+  const filtro = typeof params === 'string' ? params : (params?.filtro || '');
+  const municipio = typeof params === 'object' ? (params?.municipio || '') : '';
+  if (filtro && filtro.trim() !== "" && municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM Contacto WHERE NOMBRE LIKE ? AND MUNICIPIO = ?').all(`%${filtro}%`, municipio);
+  } else if (filtro && filtro.trim() !== "") {
     return db.prepare('SELECT * FROM Contacto WHERE NOMBRE LIKE ?').all(`%${filtro}%`);
+  } else if (municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM Contacto WHERE MUNICIPIO = ?').all(municipio);
   } else {
     return db.prepare('SELECT * FROM Contacto').all();
   }
@@ -28,27 +34,57 @@ ipcMain.handle('get-secciones', (event, filtro) => {
 });
 
 // --- Lectura de Colonias con filtro ---
-ipcMain.handle('get-colonias2', (event, filtro) => {
-  if (filtro && filtro.trim() !== "") {
+ipcMain.handle('get-colonias2', (event, { filtro, municipio }) => {
+  if (filtro && filtro.trim() !== "" && municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM Colonias WHERE NOMBRE_COLONIA LIKE ? AND MUNICIPIO = ?').all(`%${filtro}%`, municipio);
+  } else if (filtro && filtro.trim() !== "") {
     return db.prepare('SELECT * FROM Colonias WHERE NOMBRE_COLONIA LIKE ?').all(`%${filtro}%`);
+  } else if (municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM Colonias WHERE MUNICIPIO = ?').all(municipio);
   } else {
     return db.prepare('SELECT * FROM Colonias').all();
   }
 });
 
-// --- Lectura de Colonias con filtro ---
-ipcMain.handle('get-colonias', (event, filtro) => {
-  if (filtro && filtro.trim() !== "") {
-    return db.prepare('SELECT * FROM Colonias WHERE SECCION LIKE ?').all(`%${filtro}%`);
+// --- Obtener municipios distintos ---
+ipcMain.handle('get-colonias-municipios', () => {
+  return db.prepare('SELECT DISTINCT MUNICIPIO FROM Colonias ORDER BY MUNICIPIO').all();
+});
+
+// --- Lectura de Colonias con filtro por seccion y municipio ---
+ipcMain.handle('get-colonias', (event, params) => {
+  const filtro = params?.filtro || '';
+  const municipio = params?.municipio || '';
+  if (filtro && filtro.trim() !== "" && municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM Colonias WHERE SECCION = ? AND MUNICIPIO = ?').all(filtro, municipio);
+  } else if (filtro && filtro.trim() !== "") {
+    return db.prepare('SELECT * FROM Colonias WHERE SECCION = ?').all(filtro);
+  } else if (municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM Colonias WHERE MUNICIPIO = ?').all(municipio);
   } else {
     return db.prepare('SELECT * FROM Colonias').all();
+  }
+});
+
+// --- Obtener secciones distintas filtradas por municipio ---
+ipcMain.handle('get-secciones-por-municipio', (event, municipio) => {
+  if (municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT DISTINCT SECCION FROM Colonias WHERE MUNICIPIO = ? ORDER BY SECCION').all(municipio);
+  } else {
+    return db.prepare('SELECT DISTINCT SECCION FROM Colonias ORDER BY SECCION').all();
   }
 });
 
 // --- Lectura de ContactoDet con filtro ---
-ipcMain.handle('get-lideres', (event, filtro) => {
-  if (filtro && filtro.trim() !== "") {
+ipcMain.handle('get-lideres', (event, params) => {
+  const filtro = typeof params === 'string' ? params : (params?.filtro || '');
+  const municipio = typeof params === 'object' ? (params?.municipio || '') : '';
+  if (filtro && filtro.trim() !== "" && municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM ContactoDet WHERE COLONIA LIKE ? AND MUNICIPIO = ?').all(`%${filtro}%`, municipio);
+  } else if (filtro && filtro.trim() !== "") {
     return db.prepare('SELECT * FROM ContactoDet WHERE COLONIA LIKE ?').all(`%${filtro}%`);
+  } else if (municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM ContactoDet WHERE MUNICIPIO = ?').all(municipio);
   } else {
     return db.prepare('SELECT * FROM ContactoDet').all();
   }
@@ -72,9 +108,15 @@ ipcMain.handle('get-lideres2', (event, { colonia, seccion }) => {
 
 
 // --- Lectura de ContactoDet con filtro ---
-ipcMain.handle('get-contactosdet', (event, filtro) => {
-  if (filtro && filtro.trim() !== "") {
+ipcMain.handle('get-contactosdet', (event, params) => {
+  const filtro = typeof params === 'string' ? params : (params?.filtro || '');
+  const municipio = typeof params === 'object' ? (params?.municipio || '') : '';
+  if (filtro && filtro.trim() !== "" && municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM ContactoDet WHERE NOMBRE LIKE ? AND MUNICIPIO = ?').all(`%${filtro}%`, municipio);
+  } else if (filtro && filtro.trim() !== "") {
     return db.prepare('SELECT * FROM ContactoDet WHERE NOMBRE LIKE ?').all(`%${filtro}%`);
+  } else if (municipio && municipio.trim() !== "") {
+    return db.prepare('SELECT * FROM ContactoDet WHERE MUNICIPIO = ?').all(municipio);
   } else {
     return db.prepare('SELECT * FROM ContactoDet').all();
   }
@@ -83,8 +125,8 @@ ipcMain.handle('get-contactosdet', (event, filtro) => {
 ipcMain.handle('insert-contactodet', (event, data) => {
   const stmt = db.prepare(`
     INSERT INTO ContactoDet 
-    (NOMBRE, TELEFONO, COLONIA, SECCION, NUM_PERSONAS, OBSERVACIONES, OPERADOR_ENLACE1, TELEFONO1, OPERADOR_ENLACE2, TELEFONO2)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (NOMBRE, TELEFONO, COLONIA, SECCION, NUM_PERSONAS, OBSERVACIONES, OPERADOR_ENLACE1, TELEFONO1, OPERADOR_ENLACE2, TELEFONO2, MUNICIPIO)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   stmt.run(
     data.NOMBRE,
@@ -96,7 +138,8 @@ ipcMain.handle('insert-contactodet', (event, data) => {
     data.OPERADOR_ENLACE1,
     data.TELEFONO1,
     data.OPERADOR_ENLACE2,
-    data.TELEFONO2
+    data.TELEFONO2,
+    data.MUNICIPIO || 'TAPACHULA'
   );
   return true;
 });
@@ -106,10 +149,10 @@ ipcMain.handle('insert-contactodet', (event, data) => {
 ipcMain.handle('insert-contacto', (event, data) => {
   try {
     const stmt = db.prepare(`
-      INSERT INTO Contacto (NOMBRE, TELEFONO)
-      VALUES (?, ?)
+      INSERT INTO Contacto (NOMBRE, TELEFONO, MUNICIPIO)
+      VALUES (?, ?, ?)
     `);
-    stmt.run(data.NOMBRE.toUpperCase(), data.TELEFONO); // nombre en mayúsculas
+    stmt.run(data.NOMBRE.toUpperCase(), data.TELEFONO, data.MUNICIPIO || 'TAPACHULA'); // nombre en mayúsculas
     return { success: true };
   } catch (err) {
     if (err.message.includes('UNIQUE constraint failed')) {
@@ -246,7 +289,7 @@ ipcMain.handle('import-excel-data', (event, { filePath, sheetName, mapping, dupl
 
 // --- Importar secciones desde Excel ---
 
-ipcMain.handle('import-seccion-data', (event, { filePath, sheetName, mapping, duplicateAction }) => {
+ipcMain.handle('import-seccion-data', (event, { filePath, sheetName, mapping, duplicateAction, fixedMunicipio }) => {
   try {
     const workbook = XLSX.readFile(filePath);
     const name = sheetName || workbook.SheetNames[0];
@@ -258,11 +301,11 @@ ipcMain.handle('import-seccion-data', (event, { filePath, sheetName, mapping, du
     }
 
     const headers = data[0].map(h => String(h).trim());
-    const dbColumns = ['SECCION', 'TIPO', 'LN', 'PARTIDOS', 'UBICACION', 'SECTOR'];
+    const dbColumns = ['SECCION', 'TIPO', 'LN', 'PARTIDOS', 'UBICACION', 'SECTOR', 'MUNICIPIO'];
 
     const insertStmt = db.prepare(`
-      INSERT INTO Seccion2 (SECCION, TIPO, LN, PARTIDOS, UBICACION, SECTOR)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO Seccion2 (SECCION, TIPO, LN, PARTIDOS, UBICACION, SECTOR, MUNICIPIO)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
     const countStmt = db.prepare(`SELECT COUNT(*) AS cnt FROM Seccion2 WHERE SECCION=? AND TIPO=?`);
@@ -292,6 +335,11 @@ ipcMain.handle('import-seccion-data', (event, { filePath, sheetName, mapping, du
 
         record.PARTIDOS = Object.keys(partidosAcc).length > 0 ? JSON.stringify(partidosAcc) : '{}';
 
+        // Override MUNICIPIO with fixed value if provided
+        if (fixedMunicipio && fixedMunicipio.trim() !== '') {
+          record.MUNICIPIO = fixedMunicipio.trim().toUpperCase();
+        }
+
         for (const col of dbColumns) {
           if (!record[col]) record[col] = '';
         }
@@ -309,7 +357,7 @@ ipcMain.handle('import-seccion-data', (event, { filePath, sheetName, mapping, du
 
         try {
           insertStmt.run(record.SECCION, record.TIPO, record.LN,
-                         record.PARTIDOS, record.UBICACION, record.SECTOR);
+                         record.PARTIDOS, record.UBICACION, record.SECTOR, record.MUNICIPIO);
           insertados++;
         } catch (err) {
           errores++;

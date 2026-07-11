@@ -1,6 +1,19 @@
-// Cargar lista de colonias en el <select>
+// Cargar municipios
+async function cargarMunicipios() {
+  const municipios = await window.api.getColoniasMunicipios();
+  const select = document.getElementById('municipio');
+  municipios.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.MUNICIPIO;
+    option.textContent = m.MUNICIPIO;
+    select.appendChild(option);
+  });
+}
+
+// Cargar lista de colonias en el <select> filtradas por municipio
 async function cargarColonias() {
-  const colonias = await window.api.getColonias();
+  const municipio = document.getElementById('municipio').value;
+  const colonias = await window.api.getColonias({ municipio });
 
   // Filtrar colonias únicas por combinación "NOMBRE_COLONIA - SECCION"
   const coloniasUnicas = [];
@@ -29,6 +42,9 @@ async function cargarColonias() {
     opt.textContent = `${col.nombre} - ${col.seccion}`; // texto visible = "Colonia - Sección"
     select.appendChild(opt);
   });
+
+  document.getElementById('datos-seccion').innerHTML = '';
+  document.getElementById('lista-lideres').innerHTML = '';
 }
 
 
@@ -92,4 +108,5 @@ async function cargarLideres(Seccion, Colonia) {
 }
 
 // Inicializar
+cargarMunicipios();
 cargarColonias();

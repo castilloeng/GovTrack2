@@ -14,10 +14,19 @@
   </a>
   <h1 class="mb-4">Operadores</h1>
 
-  <!-- Filtro con Bootstrap -->
-  <div class="input-group mb-3">
-    <input id="filtro" type="text" class="form-control" placeholder="Filtrar por nombre">
-    <button class="btn btn-primary" onclick="cargarContactos()">Buscar</button>
+  <!-- Filtros con Bootstrap -->
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <select id="filtro-municipio" class="form-select" onchange="cargarContactos()">
+        <option value="">Todos los municipios</option>
+      </select>
+    </div>
+    <div class="col-md-8">
+      <div class="input-group">
+        <input id="filtro" type="text" class="form-control" placeholder="Filtrar por nombre">
+        <button class="btn btn-primary" onclick="cargarContactos()">Buscar</button>
+      </div>
+    </div>
   </div>
 
   <!-- Tabla con Bootstrap -->

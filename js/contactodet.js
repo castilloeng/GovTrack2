@@ -2,9 +2,21 @@ let contactosDet = [];
 let paginaActual = 1;
 const registrosPorPagina = 10;
 
+async function cargarMunicipios() {
+  const municipios = await window.api.getColoniasMunicipios();
+  const select = document.getElementById('filtro-municipio');
+  municipios.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.MUNICIPIO;
+    option.textContent = m.MUNICIPIO;
+    select.appendChild(option);
+  });
+}
+
 async function cargarContactosDet() {
   const filtro = document.getElementById('filtro').value;
-  contactosDet = await window.api.getContactosDet(filtro); // datos reales
+  const municipio = document.getElementById('filtro-municipio').value;
+  contactosDet = await window.api.getContactosDet({ filtro, municipio });
   mostrarPagina(1);
 }
 
@@ -80,4 +92,5 @@ function renderPaginacion() {
 }
 
 // cargar todos al inicio
+cargarMunicipios();
 cargarContactosDet();

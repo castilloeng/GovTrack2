@@ -65,6 +65,15 @@
       <div class="card-body">
         <p class="text-muted small">Asocia cada columna del Excel con el campo correspondiente en la tabla Seccion2. Las columnas mapeadas a PARTIDOS se fusionan en un JSON.</p>
         <div id="mapping-container"></div>
+
+        <hr>
+        <div class="row">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">MUNICIPIO <span class="text-muted fw-normal">(valor fijo para todos los registros)</span></label>
+            <input type="text" id="fixed-municipio" class="form-control" value="" placeholder="Ej: TAPACHULA">
+            <div class="form-text">Este valor se asignará al campo MUNICIPIO en todos los registros importados.</div>
+          </div>
+        </div>
       </div>
     </div>
 

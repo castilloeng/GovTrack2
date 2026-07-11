@@ -1,10 +1,21 @@
-// Cargar lista de enlaces desde tabla Contacto
-async function cargarEnlaces() {
+// Cargar municipios
+async function cargarMunicipios() {
+  const municipios = await window.api.getColoniasMunicipios();
+  const select = document.getElementById('municipio');
+  municipios.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.MUNICIPIO;
+    option.textContent = m.MUNICIPIO;
+    select.appendChild(option);
+  });
+}
 
-  const contactos = await window.api.getContactos(""); // trae todos de Contacto
+// Cargar lista de enlaces desde tabla Contacto filtrados por municipio
+async function cargarEnlaces() {
+  const municipio = document.getElementById('municipio').value;
+  const contactos = await window.api.getContactos({ filtro: '', municipio });
   const select = document.getElementById('enlace');
   select.innerHTML = '';
-
 
   // opción vacía
   const opcionVacia = document.createElement('option');
@@ -21,14 +32,17 @@ async function cargarEnlaces() {
     option.textContent = `${c.NOMBRE} (${c.TELEFONO})`;
     select.appendChild(option);
   });
+
+  document.getElementById('lista-colonias').innerHTML = '';
 }
 
 // Mostrar colonias asociadas al enlace seleccionado
 async function cargarColoniasPorEnlace() {
   const enlace = document.getElementById('enlace').value;
+  const municipio = document.getElementById('municipio').value;
   if (!enlace) return;
 
-  const contactosDet = await window.api.getContactosDet(""); // trae todos de ContactoDet
+  const contactosDet = await window.api.getContactosDet({ filtro: '', municipio });
   const colonias = contactosDet.filter(c => c.OPERADOR_ENLACE1 === enlace || c.OPERADOR_ENLACE2 === enlace);
 
   const contenedor = document.getElementById('lista-colonias');
@@ -48,4 +62,5 @@ async function cargarColoniasPorEnlace() {
 }
 
 // Inicializar
+cargarMunicipios();
 cargarEnlaces();

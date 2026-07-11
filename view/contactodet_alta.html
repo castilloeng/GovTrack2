@@ -13,9 +13,16 @@
     ← Regresar
   </a>
 
-  <h1 class="mb-4">Alta de Contacto Detallado</h1>
+  <h1 class="mb-4">Alta de Enlaces</h1>
 
   <form id="formContactoDet" class="needs-validation" novalidate>
+    <div class="mb-3">
+      <label for="municipio" class="form-label">Municipio:</label>
+      <select id="municipio" class="form-select" onchange="cargarSecciones()">
+        <option value="">-- Seleccionar --</option>
+      </select>
+    </div>
+
     <div class="mb-3">
       <label for="nombre" class="form-label">Nombre:</label>
       <select id="nombre" class="form-select" onchange="cargarTelefono()"></select>

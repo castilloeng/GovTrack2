@@ -7,9 +7,16 @@ const db = new Database(dbPath);
 db.prepare(`
   CREATE TABLE IF NOT EXISTS Contacto (
     NOMBRE TEXT,
-    TELEFONO TEXT UNIQUE
+    TELEFONO TEXT UNIQUE,
+    MUNICIPIO TEXT
   )
 `).run();
+
+// Migracion: agregar columna MUNICIPIO si no existe (bases existentes)
+const colMunContacto = db.prepare(`SELECT COUNT(*) AS cnt FROM pragma_table_info('Contacto') WHERE name='MUNICIPIO'`).get();
+if (colMunContacto.cnt === 0) {
+  db.prepare(`ALTER TABLE Contacto ADD COLUMN MUNICIPIO TEXT`).run();
+}
 
 db.prepare(`
   CREATE TABLE IF NOT EXISTS Seccion2 (
@@ -18,9 +25,16 @@ db.prepare(`
     LN TEXT,
     PARTIDOS TEXT,
     UBICACION TEXT,
-    SECTOR TEXT
+    SECTOR TEXT,
+    MUNICIPIO TEXT
   )
 `).run();
+
+// Migracion: agregar columna MUNICIPIO si no existe (bases existentes)
+const colMun = db.prepare(`SELECT COUNT(*) AS cnt FROM pragma_table_info('Seccion2') WHERE name='MUNICIPIO'`).get();
+if (colMun.cnt === 0) {
+  db.prepare(`ALTER TABLE Seccion2 ADD COLUMN MUNICIPIO TEXT`).run();
+}
 
 // Crear tabla Colonias si no existe
 db.prepare(`
@@ -46,9 +60,16 @@ db.prepare(`
     OPERADOR_ENLACE1 TEXT,
     TELEFONO1 TEXT,
     OPERADOR_ENLACE2 TEXT,
-    TELEFONO2 TEXT
+    TELEFONO2 TEXT,
+    MUNICIPIO TEXT
   )
 `).run();
+
+// Migracion: agregar columna MUNICIPIO si no existe (bases existentes)
+const colMunContactoDet = db.prepare(`SELECT COUNT(*) AS cnt FROM pragma_table_info('ContactoDet') WHERE name='MUNICIPIO'`).get();
+if (colMunContactoDet.cnt === 0) {
+  db.prepare(`ALTER TABLE ContactoDet ADD COLUMN MUNICIPIO TEXT`).run();
+}
 
 
 module.exports = db;

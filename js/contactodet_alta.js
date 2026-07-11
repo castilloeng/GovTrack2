@@ -24,9 +24,21 @@ function llenarSelect(selectId, contactos) {
   });
 }
 
-// Cargar lista de nombres desde Contacto
-async function cargarNombres() {
-  const contactos = await window.api.getContactos("");
+// Cargar municipios
+async function cargarMunicipios() {
+  const municipios = await window.api.getColoniasMunicipios();
+  const select = document.getElementById('municipio');
+  municipios.forEach(m => {
+    const option = document.createElement('option');
+    option.value = m.MUNICIPIO;
+    option.textContent = m.MUNICIPIO;
+    select.appendChild(option);
+  });
+}
+
+// Cargar lista de nombres desde Contacto, opcionalmente filtrados por municipio
+async function cargarNombres(municipio) {
+  const contactos = await window.api.getContactos({ filtro: '', municipio: municipio || '' });
 
   // Llenar ambos selects reutilizando la misma función
   llenarSelect('nombre', contactos);
@@ -55,33 +67,36 @@ function cargarTelefono2() {
   document.getElementById('telefono2').value = telefono;
 }
 
-// Cargar lista de secciones desde Colonias
+// Cargar lista de secciones desde Colonias filtradas por municipio
 async function cargarSecciones() {
-  const colonias = await window.api.getColonias("");
+  const municipio = document.getElementById('municipio').value;
+  const secciones = await window.api.getSeccionesPorMunicipio(municipio);
   const select = document.getElementById('seccion');
-  const seccionesUnicas = [...new Set(colonias.map(c => c.SECCION))];
   select.innerHTML = '';
 
-
-    // Nodo vacío al inicio
   const opcionVacia = document.createElement('option');
   opcionVacia.value = '';
   opcionVacia.textContent = '-- Seleccionar --';
   select.appendChild(opcionVacia);
 
-
-  seccionesUnicas.forEach(s => {
+  secciones.forEach(s => {
     const option = document.createElement('option');
-    option.value = s;
-    option.textContent = s;
+    option.value = s.SECCION;
+    option.textContent = s.SECCION;
     select.appendChild(option);
   });
+
+  document.getElementById('colonia').innerHTML = '';
+
+  // Recargar operadores filtrados por el municipio seleccionado
+  await cargarNombres(municipio);
 }
 
-// Al seleccionar sección, cargar colonias
+// Al seleccionar sección, cargar colonias filtradas por municipio
 async function cargarColonias() {
   const seccion = document.getElementById('seccion').value;
-  const colonias = await window.api.getColonias(seccion);
+  const municipio = document.getElementById('municipio').value;
+  const colonias = await window.api.getColonias({ filtro: seccion, municipio });
   const select = document.getElementById('colonia');
   select.innerHTML = '';
   colonias.forEach(c => {
@@ -99,6 +114,7 @@ async function guardarContactoDet() {
     TELEFONO: document.getElementById('telefono').value,
     COLONIA: document.getElementById('colonia').value,
     SECCION: document.getElementById('seccion').value,
+    MUNICIPIO: document.getElementById('municipio').value,
     NUM_PERSONAS: document.getElementById('num_personas').value,
     OBSERVACIONES: document.getElementById('observaciones').value,
     OPERADOR_ENLACE1: document.getElementById('operador_enlace1').value,
@@ -114,6 +130,7 @@ async function guardarContactoDet() {
 
   // Reiniciar selects con datos actualizados
   await cargarNombres();
+  await cargarMunicipios();
   await cargarSecciones();
 
   // Limpiar campos dependientes
@@ -124,5 +141,6 @@ async function guardarContactoDet() {
 }
 
 // Inicializar
+cargarMunicipios();
 cargarNombres();
 cargarSecciones();
