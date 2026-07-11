@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Importar Secciones - GovTrack</title>
+  <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../bootstrap-icons/bootstrap-icons.css">
+  <style>
+    .mapping-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .mapping-row select { flex: 1; }
+    .mapping-arrow { font-size: 1.2rem; color: #0078d7; font-weight: bold; }
+    .preview-table { font-size: 0.85rem; }
+    .preview-table td, .preview-table th { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .badge-excel { background-color: #217346; color: white; }
+  </style>
+</head>
+<body class="container mt-3 mb-5">
+  <a href="index.html" class="btn btn-sm btn-outline-secondary mb-3">← Regresar</a>
+  <h1 class="mb-3">Importar Secciones desde Excel</h1>
+
+  <!-- Step 1: Seleccionar archivo -->
+  <div class="card mb-4">
+    <div class="card-header"><strong>1. Seleccionar archivo Excel</strong></div>
+    <div class="card-body">
+      <button class="btn btn-success" onclick="seleccionarArchivo()">
+        <i class="bi bi-file-earmark-excel"></i> Seleccionar archivo
+      </button>
+      <span id="archivo-label" class="ms-3 text-muted">Ningún archivo seleccionado</span>
+    </div>
+  </div>
+
+  <!-- Step 2: Seleccionar pestaña -->
+  <div id="sheet-section" style="display:none;">
+    <div class="card mb-4">
+      <div class="card-header"><strong>2. Seleccionar pestaña del archivo</strong></div>
+      <div class="card-body">
+        <select id="sheet-selector" class="form-select" onchange="cambiarPestana()">
+          <option value="">Cargando pestañas...</option>
+        </select>
+        <span class="text-muted small ms-2">Selecciona la pestaña que contiene los datos de secciones</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Vista previa -->
+  <div id="preview-section" style="display:none;">
+    <div class="card mb-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>3. Vista previa de la pestaña</strong>
+        <span id="total-rows-badge" class="badge badge-excel"></span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm table-striped table-bordered mb-0 preview-table">
+            <thead id="preview-headers" class="table-dark"></thead>
+            <tbody id="preview-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Mapeo de campos -->
+    <div class="card mb-4">
+      <div class="card-header"><strong>4. Mapeo de campos</strong></div>
+      <div class="card-body">
+        <p class="text-muted small">Asocia cada columna del Excel con el campo correspondiente en la tabla Seccion2. Las columnas mapeadas a PARTIDOS se fusionan en un JSON.</p>
+        <div id="mapping-container"></div>
+      </div>
+    </div>
+
+    <!-- Step 5: Opciones de importación -->
+    <div class="card mb-4">
+      <div class="card-header"><strong>5. Opciones de importación</strong></div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <label class="form-label">Si un registro ya existe (misma SECCION + TIPO):</label>
+            <select id="duplicate-action" class="form-select">
+              <option value="skip">Omitir duplicados</option>
+              <option value="replace">Reemplazar existente</option>
+              <option value="insert">Insertar igual (puede crear duplicados)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 6: Importar -->
+    <div class="d-flex gap-2 mb-4">
+      <button class="btn btn-primary btn-lg" onclick="importarDatos()" id="btn-importar">
+        <i class="bi bi-upload"></i> Importar datos
+      </button>
+      <button class="btn btn-outline-secondary btn-lg" onclick="resetear()">
+        <i class="bi bi-arrow-counterclockwise"></i> Reiniciar
+      </button>
+    </div>
+
+    <!-- Resultados -->
+    <div id="result-section" style="display:none;" class="mb-4"></div>
+  </div>
+
+  <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/importar-seccion.js"></script>
+</body>
+</html>

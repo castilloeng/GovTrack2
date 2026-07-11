@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>GovTrack</title>
+  <!-- Bootstrap CSS local -->
+  <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+</head>
+<body class="container mt-4">
+
+  <!-- Botón Back -->
+  <a href="index.html" class="btn btn-sm btn-outline-secondary mb-3">
+    ← Regresar
+  </a>
+
+  <h1 class="mb-4">Colonias</h1>
+
+  <!-- Filtro con Bootstrap -->
+  <div class="input-group mb-3">
+    <input id="filtro" type="text" class="form-control" placeholder="Filtrar por nombre de colonia">
+    <button class="btn btn-primary" onclick="cargarColonias()">Buscar</button>
+  </div>
+
+  <!-- Tabla con Bootstrap -->
+  <table class="table table-striped table-bordered">
+    <thead class="table-light">
+      <tr>
+        <th>SECCION</th>
+        <th>TIPO_SECCION</th>
+        <th>TIPO_COLONIA</th>
+        <th>NOMBRE_COLONIA</th>
+        <th>CP</th>
+      </tr>
+    </thead>
+    <tbody id="tabla-colonias"></tbody>
+  </table>
+
+  <!-- Paginación compacta -->
+  <nav>
+    <ul class="pagination justify-content-center" id="paginacion"></ul>
+  </nav>
+
+  <!-- Bootstrap JS local -->
+  <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/colonias.js"></script>
+</body>
+</html>

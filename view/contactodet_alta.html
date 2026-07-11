@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>GovTrack</title>
+  <!-- Bootstrap CSS local -->
+  <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+</head>
+<body class="container mt-4">
+
+  <!-- Botón Back -->
+  <a href="index.html" class="btn btn-sm btn-outline-secondary mb-3">
+    ← Regresar
+  </a>
+
+  <h1 class="mb-4">Alta de Contacto Detallado</h1>
+
+  <form id="formContactoDet" class="needs-validation" novalidate>
+    <div class="mb-3">
+      <label for="nombre" class="form-label">Nombre:</label>
+      <select id="nombre" class="form-select" onchange="cargarTelefono()"></select>
+    </div>
+
+    <div class="mb-3">
+      <label for="telefono" class="form-label">Teléfono:</label>
+      <input id="telefono" class="form-control" readonly>
+    </div>
+
+    <div class="mb-3">
+      <label for="seccion" class="form-label">Sección:</label>
+      <select id="seccion" class="form-select" onchange="cargarColonias()"></select>
+    </div>
+
+    <div class="mb-3">
+      <label for="colonia" class="form-label">Colonia:</label>
+      <select id="colonia" class="form-select"></select>
+    </div>
+
+    <div class="mb-3">
+      <label for="num_personas" class="form-label">Número de Personas:</label>
+      <input id="num_personas" class="form-control">
+    </div>
+
+    <div class="mb-3">
+      <label for="observaciones" class="form-label">Observaciones:</label>
+      <textarea id="observaciones" class="form-control"></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label for="operador_enlace1" class="form-label">Operador Enlace Principal:</label>
+      <select id="operador_enlace1" class="form-select" onchange="cargarTelefono1()"></select>
+    </div>
+
+    <div class="mb-3">
+      <label for="telefono1" class="form-label">Teléfono:</label>
+      <input id="telefono1" class="form-control">
+    </div>
+
+    <div class="mb-3">
+      <label for="operador_enlace2" class="form-label">Operador Enlace Secundario:</label>
+      <select id="operador_enlace2" class="form-select" onchange="cargarTelefono2()"></select>
+    </div>
+
+    <div class="mb-3">
+      <label for="telefono2" class="form-label">Teléfono:</label>
+      <input id="telefono2" class="form-control">
+    </div>
+
+    <!-- Botones -->
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary" onclick="window.location.href='index.html'">Cancelar</button>
+      <button type="button" class="btn btn-primary" onclick="guardarContactoDet()">Guardar</button>
+    </div>
+  </form>
+
+  <!-- Bootstrap JS local -->
+  <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/contactodet_alta.js"></script>
+</body>
+</html>

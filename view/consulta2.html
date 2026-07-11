@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>GovTrack</title>
+  <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+</head>
+<body class="container mt-4">
+
+  <!-- Botón Back -->
+  <a href="index.html" class="btn btn-sm btn-outline-secondary mb-3">← Regresar</a>
+
+  <h1 class="mb-4">Consulta de Colonias por Enlace</h1>
+
+  <!-- Selector de Enlace -->
+  <div class="mb-3">
+    <label for="enlace" class="form-label">Enlace:</label>
+    <select id="enlace" class="form-select" onchange="cargarColoniasPorEnlace()"></select>
+  </div>
+
+  <!-- Colonias asociadas -->
+  <div id="lista-colonias" class="card p-3 mb-3"></div>
+
+  <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/consulta2.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>GovTrack</title>
+  <!-- Bootstrap CSS local -->
+  <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+  <style>
+    /* Opcional: si quieres que se vea más suave */
+  .item-colonia.active {
+  border: 2px solid #0d6efd; /* borde azul */
+}
+  </style>
+</head>
+<body class="container mt-4">
+
+  <!-- Botón Back e Imprimir -->
+  <div class="d-flex justify-content-between mb-3">
+    <a href="index.html" class="btn btn-sm btn-outline-secondary">← Regresar</a>
+    <button class="btn btn-sm btn-outline-primary" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+
+  <h1 class="mb-4">Consulta de Colonias y Líderes</h1>
+
+  <!-- Selector de Sección -->
+  <div class="mb-3">
+    <label for="seccion" class="form-label">Sección:</label>
+    <select id="seccion" class="form-select" onchange="cargarDatosSeccion()"></select>
+  </div>
+
+<div class="row">
+  <!-- Columna izquierda -->
+  <div class="col-md-6">
+    <div id="lista-secciones" class="card p-3 mb-3"></div>
+    <div id="lista-lideres" class="card p-3 mb-3"></div>
+  </div>
+
+  <!-- Columna derecha -->
+  <div class="col-md-6">
+    <div id="lista-colonias" class="card p-3 mb-3"></div>
+  </div>
+</div>
+
+
+  <!-- Bootstrap JS local -->
+  <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/consulta1.js"></script>
+</body>
+</html>

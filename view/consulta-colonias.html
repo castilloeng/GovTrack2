@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>GovTrack</title>
+  <!-- Bootstrap CSS local -->
+  <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+</head>
+<body class="container mt-4">
+
+  <!-- Botón Back e Imprimir -->
+  <div class="d-flex justify-content-between mb-3">
+    <a href="index.html" class="btn btn-sm btn-outline-secondary">← Regresar</a>
+    <button class="btn btn-sm btn-outline-primary" onclick="window.print()">🖨️ Imprimir</button>
+  </div>
+
+  <h1 class="mb-4">Consulta de Colonias y Líderes</h1>
+
+  <!-- Selector de Colonia -->
+  <div class="mb-3">
+    <label for="colonia" class="form-label">Colonia:</label>
+    <select id="colonia" class="form-select" onchange="seleccionarColonia()"></select>
+  </div>
+
+  <!-- Datos de la colonia seleccionada -->
+  <div id="datos-seccion" class="card p-3 mb-3"></div>
+  <div id="lista-lideres" class="card p-3 mb-3"></div>
+
+  <!-- Bootstrap JS local -->
+  <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/consulta-colonias.js"></script>
+</body>
+</html>

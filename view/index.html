@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>GovTrack</title>
+  <link rel="stylesheet" href="../bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="../bootstrap-icons/bootstrap-icons.css">
+
+  <style>
+    body {
+      background: #f5f5f5;
+      padding-top: 20px; /* menos espacio arriba */
+      font-size: 0.9rem; /* texto general más pequeño */
+    }
+    h1 {
+      text-align: center;
+      color: #0078d7;
+      margin-bottom: 20px;
+      font-size: 2rem; /* título más compacto */
+    }
+    h2 {
+      margin-top: 30px;
+      margin-bottom: 15px;
+      text-align: center;
+      font-size: 1.2rem; /* subtítulos más pequeños */
+    }
+    .menu-button {
+      border-radius: 10px;
+      text-decoration: none;
+      color: #333;
+      font-size: 14px; /* texto más pequeño */
+      font-weight: bold;
+      box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+      transition: transform 0.2s, background 0.2s;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 12px; /* menos padding */
+      height: 120px; /* más bajo */
+      background: white;
+    }
+    .menu-button i {
+      font-size: 32px; /* íconos más pequeños */
+      margin-bottom: 10px;
+    }
+    /* Colores por grupo */
+    .gestion { border: 2px solid #0078d7; }
+    .gestion:hover { background: #0078d7; color: white; transform: scale(1.05); }
+
+    .catalogo { border: 2px solid #28a745; }
+    .catalogo:hover { background: #28a745; color: white; transform: scale(1.05); }
+
+    .consulta { border: 2px solid #fd7e14; }
+    .consulta:hover { background: #fd7e14; color: white; transform: scale(1.05); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-primary border-bottom pb-2">
+      Menú Principal - GovTrack
+    </h1>
+
+    <h2 class="text-primary">Gestión de Operadores y Enlaces</h2>
+    <div class="row g-2 justify-content-center">
+      <div class="col-md-4 col-lg-3">
+        <a href="contacto.html" class="menu-button gestion">
+          <i class="bi bi-person-lines-fill"></i>
+          Consulta Operadores
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <a href="operadores_alta.html" class="menu-button gestion">
+          <i class="bi bi-person-plus-fill"></i>
+          Alta de Operadores
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <a href="contactodet_alta.html" class="menu-button gestion">
+          <i class="bi bi-link-45deg"></i>
+          Alta de Enlaces
+        </a>
+      </div>
+    </div>
+
+    <h2 class="text-success">Catálogo de Información</h2>
+    <div class="row g-2 justify-content-center">
+      <div class="col-md-4 col-lg-3">
+        <a href="seccion.html" class="menu-button catalogo">
+          <i class="bi bi-list-check"></i>
+          Secciones
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <a href="importar-seccion.html" class="menu-button catalogo">
+          <i class="bi bi-upload"></i>
+          Importar Secciones
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <a href="colonias.html" class="menu-button catalogo">
+          <i class="bi bi-house-door-fill"></i>
+          Colonias
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <a href="importar-colonias.html" class="menu-button catalogo">
+          <i class="bi bi-upload"></i>
+          Importar Colonias
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <a href="contactodet.html" class="menu-button catalogo">
+          <i class="bi bi-journal-bookmark-fill"></i>
+          Directorio
+        </a>
+      </div>
+    </div>
+
+    <h2 class="text-warning">Consultas Específicas</h2>
+    <div class="row g-2 justify-content-center">
+      <div class="col-md-4 col-lg-3">
+        <a href="consulta1.html" class="menu-button consulta">
+          <i class="bi bi-search"></i>
+          Consulta por Sección
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <a href="consulta2.html" class="menu-button consulta">
+          <i class="bi bi-search"></i>
+          Consulta por Enlace
+        </a>
+      </div>
+      <div class="col-md-4 col-lg-3">
+        <a href="consulta-colonias.html" class="menu-button consulta">
+          <i class="bi bi-search"></i>
+          Consulta por Colonia
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="../bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

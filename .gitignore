@@ -1,0 +1,27 @@
+# Dependencias
+node_modules/
+venv/
+__pycache__/
+
+# Archivos de entorno
+.env
+.env.local
+
+# Archivos de build
+dist/
+build/
+*.log
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de IDE
+.vscode/
+.idea/
+
+# Archivos temporales generados por scripts SQL
+_tmp_*.sql
+_tmp_migrate_seccion.sql
+
+db/*.db
