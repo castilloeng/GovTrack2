@@ -25,3 +25,6 @@ _tmp_*.sql
 _tmp_migrate_seccion.sql
 
 db/*.db
+GovTrackDB.db
+db/GovTrackDB.db-shm
+db/GovTrackDB.db-wal
