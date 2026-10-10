@@ -94,7 +94,7 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 - **Flujo**: cada push a `main` que toque `web/` dispara build y deploy automáticos. Los cambios en `desktop/`, `diseno/` o `CLAUDE.md` no publican nada. Alternativa manual: `npm run deploy` desde `web/`.
 - **Base de datos**: el binding de D1 (`DB` → `govtrack`) se toma de `wrangler.jsonc`, no se configura en el panel.
 - **Migraciones**: **no** se aplican en el deploy. Tras agregar una migración nueva, correr `npm run db:migrate:remote` desde `web/`.
-  - La BD remota tiene aplicada la `0001` y contiene los municipios de prueba TAPACHULA y CACAHOATAN.
+  - La BD remota tiene aplicada la `0001` y contiene los municipios de prueba TAPACHULA y CACAHOATAN. También tiene aplicada la `0002_configuracion.sql` (tema `verde`).
 - **Seguridad**: sin login, la URL pública expone la API. No cargar datos reales hasta tener autenticación, o proteger la URL con Cloudflare Access.
 
 ### Modelo de datos (resumen)
@@ -106,6 +106,7 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
   - `operador_enlace`: cada **operador** tiene **1 o 2 enlaces**. Los enlaces son **del operador**, los mismos en todas sus asignaciones.
   - `operador_asignacion`: el operador es responsable de una (sección, colonia), con `num_personas`. La FK compuesta a `seccion_colonia` garantiza que la colonia pertenezca a la sección.
 - **Acceso**: `usuario` con roles `ADMIN`, `CAPTURISTA` y `CONSULTA`. `usuario_municipio` limita qué municipios ve cada usuario (ADMIN ve todos). `importacion` es la bitácora de cargas desde Excel.
+- **Configuración**: `configuracion (clave, valor)` guarda ajustes globales del sitio, como el tema de color (migración `0002`).
 - **Vistas**: `v_asignacion` (equivale a la antigua `ContactoDet`) y `v_votos_seccion`.
 
 ### Decisiones tomadas
@@ -122,8 +123,7 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 
 ### Pendiente
 
-- Login con Google y control de acceso por rol/municipio en la API (hoy solo existen `/api/health` y `/api/municipios`, sin autenticación).
+- Login con Google y control de acceso por rol/municipio en la API. Hoy existen `/api/health`, `/api/municipios`, `GET /api/me`, `GET /api/configuracion` y `PUT /api/configuracion/tema` (solo ADMIN). Mientras no haya login, `usuarioActual()` (`web/worker/index.ts`) identifica al usuario por el header de Cloudflare Access `Cf-Access-Authenticated-User-Email` o, en local, por `USUARIO_PRUEBA_EMAIL` en `web/.dev.vars` (no se versiona). Ese usuario debe existir y estar activo en la tabla `usuario`.
 - Script de carga de catálogos desde `desktop/db/GovTrackDB.db` o Excel.
 - Conectar el frontend a la API. Las pantallas de `diseno/pantallas/` (más Configuración) ya están maquetadas en `web/src/paginas/`, pero usan los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
 - Diseñar e implementar Asignaciones y Usuarios (hoy muestran "pendiente de diseño").
-- Migración `configuracion` y endpoint del tema. Hoy el tema solo se guarda en `localStorage` (`web/src/tema.ts`).

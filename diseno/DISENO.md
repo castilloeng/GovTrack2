@@ -148,9 +148,10 @@ En **Administración** hay una opción **Configuración**, visible solo para ADM
 
 **Comportamiento**
 - El selector muestra 4 muestras grandes (tarjeta con nombre y una vista previa de botón, barra lateral y etiqueta) y un botón "Guardar". La vista previa se aplica al pasar o seleccionar, antes de guardar.
-- El tema es **global del sitio**: lo elige el ADMIN y lo ven todos los usuarios. Se guarda en D1, en una tabla `configuracion (clave, valor)` creada con una **migración nueva** (no se edita la `0001`), con la clave `tema` y los valores `azul | verde | naranja | guinda`. El valor predeterminado es `verde`, el del diseño original.
+- El tema es **global del sitio**: lo elige el ADMIN y lo ven todos los usuarios. Se guarda en D1, en la tabla `configuracion (clave, valor)` (migración `0002_configuracion.sql`), con la clave `tema` y los valores `azul | verde | naranja | guinda`. El valor predeterminado es `verde`, el del diseño original.
+- La API expone `GET /api/configuracion` (todas las claves, p. ej. `{ "tema": "verde" }`) y `PUT /api/configuracion/tema` con `{ "tema": "azul" }`, que solo acepta ADMIN.
 - En el frontend se aplica con `document.documentElement.dataset.tema = valor`. Solo cambian las variables de color del tema; el layout, la tipografía y los neutros quedan igual.
-- Al cargar, el valor se guarda en `localStorage` para evitar el parpadeo de color, pero la fuente de verdad es la API.
+- Al cargar, el valor se copia en `localStorage` para pintar el color correcto antes de que responda la API (sin parpadeo), pero la fuente de verdad es la BD.
 
 **Tokens por tema**
 

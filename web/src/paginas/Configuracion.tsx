@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import Shell from '../componentes/Shell'
 import { Encabezado } from '../componentes/ui'
-import { aplicarTema, guardarTema, temaGuardado, TEMAS, type Tema } from '../tema'
+import { aplicarTema, cargarTema, guardarTema, temaGuardado, TEMAS, type Tema } from '../tema'
 import { IcoPalomita } from '../iconos'
 
-// Configuración → tema del sitio (DISENO.md §6). Solo ADMIN.
-// La vista previa se aplica al pasar o seleccionar; "Guardar" la fija. Por ahora se guarda en localStorage;
-// la fuente de verdad será la tabla `configuracion` en D1.
+// Configuración → tema global del sitio (DISENO.md §6). Solo ADMIN.
+// La vista previa se aplica al pasar o seleccionar; "Guardar" lo fija en la tabla `configuracion` (D1).
 
 const NOMBRE: Record<Tema, string> = { verde: 'Verde', azul: 'Azul', naranja: 'Naranja', guinda: 'Guinda' }
 
@@ -14,7 +13,21 @@ export default function Configuracion() {
   const [guardado, setGuardado] = useState<Tema>(temaGuardado)
   const [elegido, setElegido] = useState<Tema>(guardado)
   const [vista, setVista] = useState<Tema | null>(null)
-  const [aviso, setAviso] = useState(false)
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
+  const [guardando, setGuardando] = useState(false)
+
+  // El tema vigente es el de la BD; la copia local solo sirve mientras responde la API.
+  useEffect(() => {
+    let vigente = true
+    cargarTema().then((t) => {
+      if (!vigente) return
+      setGuardado(t)
+      setElegido(t)
+    })
+    return () => {
+      vigente = false
+    }
+  }, [])
 
   useEffect(() => aplicarTema(vista ?? elegido), [vista, elegido])
   // Al salir sin guardar se restaura el tema guardado.
@@ -28,14 +41,21 @@ export default function Configuracion() {
             <button
               className="btn pri"
               type="button"
-              disabled={elegido === guardado}
-              onClick={() => {
-                guardarTema(elegido)
-                setGuardado(elegido)
-                setAviso(true)
+              disabled={elegido === guardado || guardando}
+              onClick={async () => {
+                setGuardando(true)
+                try {
+                  await guardarTema(elegido)
+                  setGuardado(elegido)
+                  setAviso({ ok: true, texto: 'Tema guardado' })
+                } catch (e) {
+                  setAviso({ ok: false, texto: `No se pudo guardar: ${(e as Error).message}` })
+                } finally {
+                  setGuardando(false)
+                }
               }}
             >
-              Guardar
+              {guardando ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
         </Encabezado>
@@ -61,7 +81,7 @@ export default function Configuracion() {
                 onBlur={() => setVista(null)}
                 onClick={() => {
                   setElegido(t)
-                  setAviso(false)
+                  setAviso(null)
                 }}
               >
                 <div className="tema-prev">
@@ -94,8 +114,8 @@ export default function Configuracion() {
             ))}
           </div>
           {aviso && (
-            <p role="status" className="tag" style={{ alignSelf: 'flex-start' }}>
-              Tema guardado
+            <p role="status" className={'tag' + (aviso.ok ? '' : ' warn')} style={{ alignSelf: 'flex-start', whiteSpace: 'normal' }}>
+              {aviso.texto}
             </p>
           )}
         </section>
