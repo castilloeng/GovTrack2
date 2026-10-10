@@ -155,6 +155,23 @@ export type Asignacion = {
   observaciones: string | null
 }
 
+/** Fila de /municipios/:mid/asignaciones (vigentes o dadas de baja). */
+export type AsignacionFila = Asignacion & {
+  operador_id: number
+  operador: string
+  telefono: string | null
+  enlaces: PersonaBreve[]
+  created_at: string
+  deleted_at: string | null
+}
+
+/** Par sección + colonia sin asignación vigente (?estado=sin-operador). */
+export type ColoniaSinOperador = { seccion_id: number; seccion: number; colonia_id: number; colonia: string }
+
+export type PaginaAsignaciones<T> = Pagina<T> & { operadores: number; personas: number }
+
+export type PersonaSinAsignar = PersonaBreve & { created_at: string }
+
 export type PersonaDetalle = PersonaBreve & {
   municipio_id: number
   deleted_at: string | null

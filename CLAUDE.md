@@ -143,8 +143,7 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 ### Pendiente
 
 - Carga de catálogos desde Excel (desde el SQLite de escritorio ya existe `web/scripts/seed_desde_desktop.py`).
-- Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`), **Operadores y enlaces** (`/operadores`, `/operadores/:id`), **Panel** (`/`), **Usuarios** (`/usuarios`) y los selectores de municipio y proceso ya usan la API; Importar sigue con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
-- Diseñar e implementar Asignaciones (hoy muestra "pendiente de diseño").
+- Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`), **Operadores y enlaces** (`/operadores`, `/operadores/:id`), **Panel** (`/`), **Usuarios** (`/usuarios`), **Asignaciones** (`/asignaciones`) y los selectores de municipio y proceso ya usan la API; Importar sigue con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
 
 ### Documentación de la API (OpenAPI)
 
@@ -155,8 +154,10 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 
 ### API de operadores y enlaces (`web/worker/estructura.ts`)
 
-- Lecturas: `GET /api/municipios/:mid/operadores` (paginado; `?q=`, `?seccion=` número, `?enlace=` id), `GET /api/municipios/:mid/enlaces` (sin paginar; `?q=`, `?seccion=`), `GET /api/municipios/:mid/personas?q=` (buscador del padrón, máx. 20) y `GET /api/personas/:id` (enlaces, asignaciones vigentes y "enlace de").
-- Escrituras (ADMIN o CAPTURISTA): `POST /api/municipios/:mid/personas` (con `enlaces` crea un operador), `PATCH /api/personas/:id`, `PUT /api/personas/:id/enlaces`, `DELETE /api/personas/:id` (baja lógica de la persona y sus asignaciones; no si es enlace de operadores activos), `POST /api/personas/:id/asignaciones`, `PATCH` y `DELETE /api/asignaciones/:id` (baja lógica).
+- Lecturas: `GET /api/municipios/:mid/operadores` (paginado; `?q=`, `?seccion=` número, `?enlace=` id), `GET /api/municipios/:mid/enlaces` (sin paginar; `?q=`, `?seccion=`), `GET /api/municipios/:mid/personas?q=` (buscador del padrón, máx. 20), `GET /api/municipios/:mid/personas/sin-asignar` (paginado; personas sin asignaciones, sin enlaces y que no son enlace de nadie) y `GET /api/personas/:id` (enlaces, asignaciones vigentes y "enlace de").
+- `GET /api/municipios/:mid/asignaciones` (pantalla Asignaciones): `?estado=vigentes|bajas|sin-operador` (este último devuelve pares sección + colonia sin asignación vigente), `?q=`, `?seccion=`, `?enlace=`, paginado, con `total`, `operadores` y `personas` de lo filtrado. `?formato=csv` exporta todo lo filtrado (CSV UTF-8 con BOM para Excel, máx. 20,000 filas).
+- Escrituras (ADMIN o CAPTURISTA): `POST /api/municipios/:mid/personas` (sin `enlaces` registra a la persona sin rol; con `enlaces` crea un operador), `PATCH /api/personas/:id`, `PUT /api/personas/:id/enlaces`, `DELETE /api/personas/:id` (baja lógica de la persona y sus asignaciones; no si es enlace de operadores activos), `POST /api/personas/:id/asignaciones`, `PATCH` y `DELETE /api/asignaciones/:id` (baja lógica).
+- Los enlaces son opcionales al crear un operador o asignarlo: se pueden completar después (`PUT /api/personas/:id/enlaces` exige 1 o 2). "Registrar persona" (solo nombre y teléfono) está en Asignaciones y en Operadores y enlaces.
 - Es operador quien tiene asignaciones vigentes o enlaces; es enlace quien aparece en `operador_enlace` de un operador activo. El detalle de cada ruta está en la especificación OpenAPI.
 
 ### API del panel (`web/worker/panel.ts`)

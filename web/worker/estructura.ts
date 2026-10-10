@@ -128,6 +128,135 @@ estructura.get('/municipios/:mid/enlaces', async (c) => {
   return c.json(results)
 })
 
+/** Filas de la exportación a Excel (CSV); más que esto no cabe en una respuesta razonable del Worker. */
+const EXPORTAR_MAX = 20000
+
+/**
+ * Asignaciones del municipio en una tabla plana (DISENO.md §5 "Asignaciones").
+ * ?estado=vigentes (por omisión) | bajas | sin-operador · ?q= operador o colonia · ?seccion= número
+ * · ?enlace= id · ?pagina= · ?limite= · ?formato=csv (todo lo filtrado, sin paginar).
+ * Con `sin-operador` las filas son los pares sección + colonia sin asignación vigente.
+ */
+estructura.get('/municipios/:mid/asignaciones', async (c) => {
+  const mid = idParam(c.req.param('mid'), 'municipio')
+  await accesoMunicipio(c, mid)
+  const estado = c.req.query('estado') ?? 'vigentes'
+  if (!['vigentes', 'bajas', 'sin-operador'].includes(estado)) throw new ErrorApi(400, 'estado debe ser vigentes, bajas o sin-operador')
+  const csv = c.req.query('formato') === 'csv'
+  const { limite, offset } = csv ? { limite: EXPORTAR_MAX, offset: 0 } : paginacion(c)
+  const q = (c.req.query('q') ?? '').trim()
+  const seccion = c.req.query('seccion') ? idParam(c.req.query('seccion'), 'sección') : null
+  const enlace = c.req.query('enlace') ? idParam(c.req.query('enlace'), 'enlace') : null
+  const db = c.env.DB
+
+  if (estado === 'sin-operador') {
+    const { results } = await db
+      .prepare(
+        `WITH ${ASIG}
+         SELECT s.id AS seccion_id, s.numero AS seccion, col.id AS colonia_id, col.nombre AS colonia, count(*) OVER () AS total
+         FROM seccion_colonia sc JOIN seccion s ON s.id = sc.seccion_id JOIN colonia col ON col.id = sc.colonia_id
+         WHERE s.municipio_id = ?1
+           AND NOT EXISTS (SELECT 1 FROM asig WHERE seccion_id = sc.seccion_id AND colonia_id = sc.colonia_id)
+           AND (?2 = '' OR col.nombre LIKE '%' || ?2 || '%')
+           AND (?3 IS NULL OR s.numero = ?3)
+         ORDER BY s.numero, col.nombre
+         LIMIT ?4 OFFSET ?5`,
+      )
+      .bind(mid, q, seccion, limite, offset)
+      .all<{ seccion: number; colonia: string; total: number }>()
+    if (csv) return respuestaCsv(c, 'colonias-sin-operador', [['Sección', 'Colonia'], ...results.map((r) => [r.seccion, r.colonia])])
+    return c.json({ total: results[0]?.total ?? 0, operadores: 0, personas: 0, filas: results.map(({ total: _, ...r }) => r) })
+  }
+
+  const bajas = estado === 'bajas'
+  const desde = `FROM operador_asignacion a
+     JOIN persona p ON p.id = a.operador_id
+     JOIN seccion s ON s.id = a.seccion_id
+     JOIN colonia col ON col.id = a.colonia_id
+     WHERE s.municipio_id = ?1
+       AND ${bajas ? 'a.deleted_at IS NOT NULL' : 'a.deleted_at IS NULL AND p.deleted_at IS NULL'}
+       AND (?2 = '' OR p.nombre LIKE '%' || ?2 || '%' OR col.nombre LIKE '%' || ?2 || '%')
+       AND (?3 IS NULL OR s.numero = ?3)
+       AND (?4 IS NULL OR EXISTS (SELECT 1 FROM operador_enlace WHERE operador_id = p.id AND enlace_id = ?4))`
+  const [filas, totales] = await db.batch([
+    db
+      .prepare(
+        `SELECT a.id, a.seccion_id, s.numero AS seccion, a.colonia_id, col.nombre AS colonia,
+                p.id AS operador_id, p.nombre AS operador, p.telefono, ${ENLACES_JSON} AS enlaces,
+                a.num_personas, a.observaciones, a.created_at, a.deleted_at
+         ${desde}
+         ORDER BY ${bajas ? 'a.deleted_at DESC' : 's.numero, col.nombre, p.nombre'}
+         LIMIT ?5 OFFSET ?6`,
+      )
+      .bind(mid, q, seccion, enlace, limite, offset),
+    db
+      .prepare(`SELECT count(*) AS total, count(DISTINCT p.id) AS operadores, coalesce(sum(a.num_personas), 0) AS personas ${desde}`)
+      .bind(mid, q, seccion, enlace),
+  ])
+  const rows = (filas.results as (FilaAsignacion & { enlaces: string })[]).map((r) => ({ ...r, enlaces: JSON.parse(r.enlaces) as Enlace[] }))
+
+  if (csv) {
+    const encabezado = ['Sección', 'Colonia', 'Operador', 'Teléfono', 'Enlace 1', 'Teléfono enlace 1', 'Enlace 2', 'Teléfono enlace 2', 'Personas', 'Observaciones', 'Alta']
+    if (bajas) encabezado.push('Baja')
+    return respuestaCsv(c, bajas ? 'asignaciones-dadas-de-baja' : 'asignaciones', [
+      encabezado,
+      ...rows.map((r) => {
+        const fila: unknown[] = [r.seccion, r.colonia, r.operador, r.telefono, r.enlaces[0]?.nombre, r.enlaces[0]?.telefono, r.enlaces[1]?.nombre, r.enlaces[1]?.telefono, r.num_personas, r.observaciones, r.created_at.slice(0, 10)]
+        if (bajas) fila.push(r.deleted_at?.slice(0, 10))
+        return fila
+      }),
+    ])
+  }
+  return c.json({ ...(totales.results[0] as { total: number; operadores: number; personas: number }), filas: rows })
+})
+
+type Enlace = { id: number; nombre: string; telefono: string | null }
+type FilaAsignacion = {
+  seccion: number
+  colonia: string
+  operador: string
+  telefono: string | null
+  num_personas: number
+  observaciones: string | null
+  created_at: string
+  deleted_at: string | null
+}
+
+/** CSV con BOM (Excel lo abre con acentos) y todos los campos entre comillas. */
+function respuestaCsv(c: Ctx, nombre: string, filas: unknown[][]) {
+  const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+  const cuerpo = '﻿' + filas.map((f) => f.map(celda).join(',')).join('\r\n') + '\r\n'
+  return c.body(cuerpo, 200, {
+    'Content-Type': 'text/csv; charset=utf-8',
+    'Content-Disposition': `attachment; filename="${nombre}-${new Date().toISOString().slice(0, 10)}.csv"`,
+  })
+}
+
+/**
+ * Personas del padrón sin rol en la estructura: sin asignaciones vigentes, sin enlaces propios y que
+ * no son enlace de ningún operador activo. ?q= nombre o teléfono · ?pagina= · ?limite=
+ */
+estructura.get('/municipios/:mid/personas/sin-asignar', async (c) => {
+  const mid = idParam(c.req.param('mid'), 'municipio')
+  await accesoMunicipio(c, mid)
+  const { limite, offset } = paginacion(c)
+  const { q, tel } = filtrosPersona(c)
+  const { results } = await c.env.DB.prepare(
+    `SELECT p.id, p.nombre, p.telefono, p.created_at, count(*) OVER () AS total
+     FROM persona p
+     WHERE p.municipio_id = ?1 AND p.deleted_at IS NULL
+       AND NOT EXISTS (SELECT 1 FROM operador_asignacion WHERE operador_id = p.id AND deleted_at IS NULL)
+       AND NOT EXISTS (SELECT 1 FROM operador_enlace WHERE operador_id = p.id)
+       AND ${ENLACE_DE} = 0
+       AND (?2 = '' OR p.nombre LIKE '%' || ?2 || '%' OR (?3 <> '' AND p.telefono LIKE '%' || ?3 || '%'))
+     ORDER BY p.created_at DESC, p.nombre
+     LIMIT ?4 OFFSET ?5`,
+  )
+    .bind(mid, q, tel, limite, offset)
+    .all<{ total: number }>()
+  return c.json({ total: results[0]?.total ?? 0, filas: results.map(({ total: _, ...r }) => r) })
+})
+
 /** Búsqueda en el padrón (para elegir enlaces). ?q= nombre o teléfono; máximo 20. */
 estructura.get('/municipios/:mid/personas', async (c) => {
   const mid = idParam(c.req.param('mid'), 'municipio')
@@ -173,7 +302,7 @@ estructura.get('/personas/:id', async (c) => {
 // Personas y enlaces
 // ---------------------------------------------------------------------------
 
-/** Alta de persona (operador nuevo). Con `enlaces` queda como operador con sus 1 o 2 enlaces. */
+/** Alta de persona. Sin `enlaces` queda en el padrón sin rol; con `enlaces`, como operador con sus 1 o 2 enlaces. */
 estructura.post('/municipios/:mid/personas', async (c) => {
   const mid = idParam(c.req.param('mid'), 'municipio')
   const u = await accesoMunicipio(c, mid, true)

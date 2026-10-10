@@ -4,8 +4,8 @@ import Hoja from '../componentes/Hoja'
 import { Encabezado } from '../componentes/ui'
 import { useContexto } from '../componentes/Contexto'
 import { usePorPagina } from '../componentes/usePorPagina'
-import { AsignacionForm, EnlacesForm, PersonaForm } from '../componentes/FormulariosEstructura'
-import { api, useApi, type Asignacion, type EnlaceFila, type OperadorFila, type Pagina, type PersonaDetalle } from '../api'
+import { AsignacionForm, EditarAsignacionForm, EnlacesForm, PersonaForm } from '../componentes/FormulariosEstructura'
+import { api, useApi, type Asignacion, type EnlaceFila, type OperadorFila, type Pagina, type PersonaBreve, type PersonaDetalle } from '../api'
 import { abreviar, iniciales, n, nombrePropio, numSeccion, telefono } from '../formato'
 import { IcoAtras, IcoBuscar, IcoCerrar, IcoFiltro, IcoFlecha, IcoMas } from '../iconos'
 import { Link, navegar } from '../router'
@@ -22,7 +22,8 @@ export default function Operadores({ id }: { id?: number }) {
   const [porEnlace, setPorEnlace] = useState(false)
   const [pagina, setPagina] = useState(1)
   const [hojaFiltros, setHojaFiltros] = useState(false)
-  const [alta, setAlta] = useState(false)
+  const [alta, setAlta] = useState<'operador' | 'persona' | null>(null)
+  const [asignarA, setAsignarA] = useState<PersonaBreve | null>(null)
   const limite = usePorPagina()
 
   useEffect(() => {
@@ -92,11 +93,16 @@ export default function Operadores({ id }: { id?: number }) {
         <div className={id ? 'desde-tablet' : undefined}>
           <Encabezado titulo="Operadores y enlaces" desc="Cada operador tiene 1 o 2 enlaces y se asigna a una o varias colonias de una sección.">
             {puedeCapturar && municipioId && (
-              <div className="barra-movil">
-                <button className="btn pri" type="button" onClick={() => setAlta(true)}>
-                  <IcoMas />
-                  Nuevo operador
-                </button>
+              <div className="acciones">
+                <div className="barra-movil">
+                  <button className="btn" type="button" onClick={() => setAlta('persona')}>
+                    Registrar persona
+                  </button>
+                  <button className="btn pri" type="button" onClick={() => setAlta('operador')}>
+                    <IcoMas />
+                    Nuevo operador
+                  </button>
+                </div>
               </div>
             )}
           </Encabezado>
@@ -187,11 +193,26 @@ export default function Operadores({ id }: { id?: number }) {
       {alta && municipioId && (
         <PersonaForm
           municipioId={municipioId}
-          onCerrar={() => setAlta(false)}
-          onGuardada={(nuevo) => {
-            setAlta(false)
+          modo={alta}
+          onCerrar={() => setAlta(null)}
+          onOtra={recargar}
+          onGuardada={(nueva, asignar) => {
+            setAlta(null)
             recargar()
-            navegar(`/operadores/${nuevo}`)
+            navegar(`/operadores/${nueva.id}`)
+            if (asignar) setAsignarA(nueva)
+          }}
+        />
+      )}
+      {asignarA && municipioId && (
+        <AsignacionForm
+          municipioId={municipioId}
+          persona={asignarA}
+          onCerrar={() => setAsignarA(null)}
+          onOtra={recargar}
+          onGuardada={() => {
+            setAsignarA(null)
+            recargar()
           }}
         />
       )}
@@ -489,8 +510,13 @@ function Detalle({ persona: p, auto, puedeEditar, onCambio }: { persona: Persona
       )}
 
       {form?.tipo === 'persona' && <PersonaForm municipioId={p.municipio_id} persona={p} onCerrar={cerrar} onGuardada={guardado} />}
-      {form?.tipo === 'enlaces' && <EnlacesForm persona={p} onCerrar={cerrar} onGuardada={guardado} />}
-      {form?.tipo === 'asignacion' && <AsignacionForm persona={p} asignacion={form.asignacion} onCerrar={cerrar} onGuardada={guardado} />}
+      {form?.tipo === 'enlaces' && <EnlacesForm persona={p} municipioId={p.municipio_id} onCerrar={cerrar} onGuardada={guardado} />}
+      {form?.tipo === 'asignacion' &&
+        (form.asignacion ? (
+          <EditarAsignacionForm asignacion={form.asignacion} onCerrar={cerrar} onGuardada={guardado} />
+        ) : (
+          <AsignacionForm municipioId={p.municipio_id} persona={p} onCerrar={cerrar} onGuardada={guardado} onOtra={onCambio} />
+        ))}
       {form?.tipo === 'baja' && (
         <Hoja titulo="Dar de baja" onCerrar={cerrar}>
           <p style={{ lineHeight: 1.5 }}>

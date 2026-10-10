@@ -28,13 +28,30 @@ export function useEnvio(accion: () => Promise<void>) {
       await accion()
     } catch (err) {
       setError((err as Error).message)
+    } finally {
+      // Si el formulario sigue abierto (p. ej. "agregar otra"), vuelve a quedar disponible.
       setGuardando(false)
     }
   }
   return { guardando, error, enviar }
 }
 
-export function Formulario({ onSubmit, error, children, guardando, boton }: { onSubmit: (e: FormEvent) => void; error: string; children: ReactNode; guardando: boolean; boton: string }) {
+export function Formulario({
+  onSubmit,
+  error,
+  children,
+  guardando,
+  boton,
+  extra,
+}: {
+  onSubmit: (e: FormEvent) => void
+  error: string
+  children: ReactNode
+  guardando: boolean
+  boton: string
+  /** Controles junto al botón principal (p. ej. un segundo botón de envío). */
+  extra?: ReactNode
+}) {
   return (
     <form className="pila" style={{ gap: 16 }} onSubmit={onSubmit}>
       {children}
@@ -43,9 +60,18 @@ export function Formulario({ onSubmit, error, children, guardando, boton }: { on
           {error}
         </p>
       )}
-      <button type="submit" className="btn pri" disabled={guardando}>
-        {guardando ? 'Guardando…' : boton}
-      </button>
+      {extra ? (
+        <div className="acciones">
+          {extra}
+          <button type="submit" className="btn pri" style={{ flex: 1 }} disabled={guardando}>
+            {guardando ? 'Guardando…' : boton}
+          </button>
+        </div>
+      ) : (
+        <button type="submit" className="btn pri" disabled={guardando}>
+          {guardando ? 'Guardando…' : boton}
+        </button>
+      )}
     </form>
   )
 }

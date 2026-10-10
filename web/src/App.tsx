@@ -9,6 +9,7 @@ import Importar from './paginas/Importar'
 import Configuracion from './paginas/Configuracion'
 import ApiDocs from './paginas/ApiDocs'
 import Usuarios from './paginas/Usuarios'
+import Asignaciones from './paginas/Asignaciones'
 import Pendiente from './paginas/Pendiente'
 
 // Pantallas según diseno/DISENO.md. Secciones y colonias ya usan la API; el resto aún usa los datos de ejemplo (src/datos.ts).
@@ -25,7 +26,7 @@ function Pantalla({ ruta }: { ruta: string }) {
   if (ruta === '/importaciones') return <Importar />
   if (ruta === '/configuracion') return <Configuracion />
   if (ruta === '/api-docs') return <ApiDocs />
-  if (ruta === '/asignaciones') return <Pendiente titulo="Asignaciones" desc="Tabla completa de asignaciones y formulario de alta." />
+  if (ruta === '/asignaciones') return <Asignaciones />
   if (ruta === '/usuarios') return <Usuarios />
   return <Pendiente titulo="Página no encontrada" desc={`No existe la ruta ${ruta}.`} />
 }

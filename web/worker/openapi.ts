@@ -297,6 +297,33 @@ export const openapi = {
           observaciones: nullable('string'),
         },
       },
+      AsignacionFila: {
+        type: 'object',
+        properties: {
+          id: int,
+          seccion_id: int,
+          seccion: { ...int, description: 'Número de sección.' },
+          colonia_id: int,
+          colonia: { type: 'string' },
+          operador_id: int,
+          operador: { type: 'string' },
+          telefono: nullable('string', { description: 'Teléfono del operador.' }),
+          enlaces: { type: 'array', items: ref('PersonaBreve'), description: '0, 1 o 2, en orden.' },
+          num_personas: int,
+          observaciones: nullable('string'),
+          created_at: { type: 'string', format: 'date-time' },
+          deleted_at: nullable('string', { format: 'date-time', description: 'Solo con `estado=bajas`.' }),
+        },
+      },
+      ColoniaSinOperador: {
+        type: 'object',
+        description: 'Par sección + colonia sin asignación vigente.',
+        properties: { seccion_id: int, seccion: { ...int, description: 'Número de sección.' }, colonia_id: int, colonia: { type: 'string' } },
+      },
+      PersonaSinAsignar: {
+        type: 'object',
+        properties: { id: int, nombre: { type: 'string' }, telefono: nullable('string'), created_at: { type: 'string', format: 'date-time' } },
+      },
       PersonaDetalle: {
         type: 'object',
         properties: {
@@ -565,6 +592,58 @@ export const openapi = {
         responses: { '200': json({ type: 'array', items: ref('EnlaceFila') }), ...LECTURA_MUNICIPIO },
       },
     },
+    '/municipios/{mid}/asignaciones': {
+      get: {
+        tags: ['Estructura'],
+        summary: 'Asignaciones del municipio',
+        description:
+          'Tabla plana de asignaciones con los totales de lo filtrado. `vigentes`: ni la asignación ni el operador están dados de baja (orden: sección, colonia, operador). ' +
+          '`bajas`: asignaciones dadas de baja, la más reciente primero. `sin-operador`: pares sección + colonia sin asignación vigente (`filas` son `ColoniaSinOperador`; `q` busca solo en la colonia y se ignora `enlace`). ' +
+          'Con `formato=csv` devuelve todo lo filtrado (máximo 20,000 filas) como CSV UTF-8 con BOM para Excel.',
+        parameters: [
+          MID,
+          query('estado', 'Qué filas devolver.', { type: 'string', enum: ['vigentes', 'bajas', 'sin-operador'], default: 'vigentes' }),
+          query('q', 'Parte del nombre del operador o de la colonia.'),
+          query('seccion', 'Número de sección.', { type: 'integer' }),
+          query('enlace', 'Solo operadores con este enlace (id).', { type: 'integer' }),
+          query('formato', '`csv` para exportar a Excel (sin paginar).', { type: 'string', enum: ['csv'] }),
+          ...PAGINA,
+        ],
+        responses: {
+          '200': {
+            description: 'OK',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    total: { ...int, description: 'Filas que cumplen los filtros.' },
+                    operadores: { ...int, description: 'Operadores distintos en lo filtrado (0 con `sin-operador`).' },
+                    personas: { ...int, description: 'Personas movilizadas en lo filtrado (0 con `sin-operador`).' },
+                    filas: { type: 'array', items: { oneOf: [ref('AsignacionFila'), ref('ColoniaSinOperador')] } },
+                  },
+                },
+              },
+              'text/csv': { schema: { type: 'string' } },
+            },
+          },
+          '400': err('Parámetros inválidos.'),
+          ...LECTURA_MUNICIPIO,
+        },
+      },
+    },
+    '/municipios/{mid}/personas/sin-asignar': {
+      get: {
+        tags: ['Estructura'],
+        summary: 'Personas sin asignar',
+        description: 'Personas activas sin asignaciones vigentes, sin enlaces propios y que no son enlace de ningún operador activo. La más reciente primero.',
+        parameters: [MID, query('q', 'Parte del nombre o del teléfono (desde 3 dígitos).'), ...PAGINA],
+        responses: {
+          '200': json({ type: 'object', properties: { total: int, filas: { type: 'array', items: ref('PersonaSinAsignar') } } }),
+          ...LECTURA_MUNICIPIO,
+        },
+      },
+    },
     '/municipios/{mid}/personas': {
       get: {
         tags: ['Estructura'],
@@ -576,7 +655,7 @@ export const openapi = {
       post: {
         tags: ['Estructura'],
         summary: 'Alta de persona u operador',
-        description: 'Con `enlaces` queda como operador con sus 1 o 2 enlaces.',
+        description: 'Sin `enlaces` la persona queda en el padrón sin rol (aparece en Personas sin asignar); con `enlaces` queda como operador con sus 1 o 2 enlaces.',
         parameters: [MID],
         requestBody: cuerpo({ allOf: [ref('PersonaEntrada'), { type: 'object', required: ['nombre'], properties: { enlaces: ref('Enlaces') } }] }),
         responses: { '201': json({ type: 'object', properties: { id: int } }, 'Creada'), ...ESCRITURA, '409': err('El teléfono ya está registrado.') },

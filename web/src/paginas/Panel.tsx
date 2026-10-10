@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import Shell from '../componentes/Shell'
 import { Barra, BarrasPartidos, Encabezado } from '../componentes/ui'
 import { useContexto } from '../componentes/Contexto'
+import { AsignacionForm } from '../componentes/FormulariosEstructura'
 import { useApi, type EventoActividad, type Pagina, type PanelDatos, type SeccionFila } from '../api'
 import { UMBRAL_BAJA_COBERTURA } from '../datos'
 import { cuando, n, nombreCargo, nombrePropio, numSeccion, pct } from '../formato'
@@ -27,8 +28,9 @@ const PARTIDOS_RESUMEN = 3
 const porcentaje = (parte: number, total: number) => (total > 0 ? (parte / total) * 100 : 0)
 
 export default function Panel() {
-  const { municipio, municipioId, procesoId, procesos } = useContexto()
+  const { municipio, municipioId, procesoId, procesos, puedeCapturar } = useContexto()
   const [filtro, setFiltro] = useState<Filtro>('todas')
+  const [alta, setAlta] = useState(false)
 
   const base = municipioId ? `/municipios/${municipioId}` : null
   const resumen = useApi<PanelDatos>(base && `${base}/panel${procesoId ? `?proceso=${procesoId}` : ''}`)
@@ -56,12 +58,14 @@ export default function Panel() {
             <button className="btn desde-tablet" type="button">
               Exportar a Excel
             </button>
-            <div className="barra-movil">
-              <Link className="btn pri" to="/operadores">
-                <IcoMas />
-                Nueva asignación
-              </Link>
-            </div>
+            {puedeCapturar && municipioId && (
+              <div className="barra-movil">
+                <button className="btn pri" type="button" onClick={() => setAlta(true)}>
+                  <IcoMas />
+                  Nueva asignación
+                </button>
+              </div>
+            )}
           </div>
         </Encabezado>
 
@@ -244,6 +248,24 @@ export default function Panel() {
           </div>
         </div>
       </main>
+
+      {alta && municipioId && (
+        <AsignacionForm
+          municipioId={municipioId}
+          onCerrar={() => setAlta(false)}
+          onOtra={() => {
+            resumen.recargar()
+            actividad.recargar()
+            tabla.recargar()
+          }}
+          onGuardada={() => {
+            setAlta(false)
+            resumen.recargar()
+            actividad.recargar()
+            tabla.recargar()
+          }}
+        />
+      )}
     </Shell>
   )
 }

@@ -14,6 +14,8 @@ Esta es la **referencia obligatoria** para construir cualquier interfaz de la ve
 | `pantallas/Seccion.dc.html` | Detalle de sección (resultados y estructura) |
 | `pantallas/Importar.dc.html` | Importar desde Excel |
 
+`propuestas/*.html` son maquetas de pantallas nuevas en revisión; se documentan en §5 cuando se aprueban.
+
 ---
 
 ## 1. Principios generales
@@ -125,7 +127,8 @@ Se implementan como variables CSS en `:root`. Los valores de color dependen del 
   - El filtro de sección es un campo numérico (hay cientos de secciones); el de enlace es un selector con todos los enlaces del municipio.
   - En la vista "por enlace", cada fila abre el detalle del enlace (`/operadores/:id` sirve para cualquier persona). El detalle de un enlace lista "Enlace de" con sus operadores.
   - Los enlaces se cambian con "Cambiar" junto al título (buscador del padrón, 1 o 2 enlaces). Cada asignación tiene "Editar" (personas, observaciones y "Quitar asignación", con confirmación).
-  - "Nuevo operador" pide nombre, teléfono y al menos un enlace. El alta de asignación pide la sección por número y la colonia se elige entre las de esa sección.
+  - "Nuevo operador" pide nombre, teléfono y, opcionalmente, 1 o 2 enlaces (se pueden completar después con "+ Agregar"). Un operador sin enlaces lleva la etiqueta de alerta "Sin enlace". El alta de asignación pide la sección por número y la colonia se elige entre las de esa sección.
+  - "Registrar persona" (botón secundario junto a "Nuevo operador") usa el mismo formulario que en Asignaciones (ver abajo).
   - No se puede dar de baja a quien es enlace de operadores activos; el mensaje lo explica en la misma hoja.
   - Los nombres se guardan en mayúsculas y se muestran con mayúscula inicial; las abreviaturas usan el primer apellido ("José Luis de la Torre Pérez" → "J. de la Torre").
 
@@ -177,9 +180,25 @@ Se implementan como variables CSS en `:root`. Los valores de color dependen del 
 - Protecciones: el ADMIN no puede cambiar su propio rol ni desactivarse, y siempre debe quedar al menos un ADMIN activo. El formulario lo explica en lugar de mostrar los controles deshabilitados sin razón.
 - El selector de municipio de la barra superior solo lista los municipios permitidos del usuario (ADMIN ve todos).
 
+### Asignaciones (sin maqueta aprobada; propuesta en `propuestas/Asignaciones.html`)
+- Vista transversal de la estructura (`/asignaciones`): todas las asignaciones del municipio en una tabla plana, sin entrar operador por operador.
+- Encabezado "Asignaciones" con la descripción "Qué operador cubre cada colonia de cada sección y cuántas personas moviliza." Acciones: "Exportar a Excel" (descarga exactamente lo filtrado), "Registrar persona" (secundaria) y "+ Nueva asignación" (principal). CONSULTA solo ve "Exportar a Excel".
+- Filtros: búsqueda (operador o colonia), número de sección y enlace. Segmentos: **Vigentes · Dadas de baja · Colonias sin operador · Personas sin asignar (n)**.
+- Tabla de asignaciones: Sección (enlace al detalle), Colonia, Operador (enlace a `/operadores/:id`), Enlaces abreviados (o "Sin enlace" de alerta), Personas, Alta (o Baja) y "Editar". El pie suma lo filtrado (asignaciones, operadores y personas) además de "Mostrando X de Y".
+- "Colonias sin operador": pares sección + colonia sin asignación vigente, con la etiqueta "Sin operador" y la acción "Asignar", que abre la nueva asignación con la sección y la colonia ya elegidas.
+- "Personas sin asignar": personas del padrón sin asignaciones, sin enlaces y que no son enlace de nadie. Columnas: Persona, Celular, Registrada y las acciones "Asignar" (nueva asignación con la persona ya elegida) y "Editar". En cuanto la persona tiene un rol, sale de esta lista. Se vuelve enlace al elegirla como enlace de un operador.
+- **Nueva asignación** (Hoja), en el orden sección → colonia → operador:
+  1. Sección por número, con su resumen (colonias y cuántas sin operador).
+  2. Colonia como opciones con descripción (§4): las sin operador primero con su etiqueta; las demás con sus operadores y personas.
+  3. Operador: buscador del padrón; también ofrece "+ Registrar persona nueva" (nombre y celular) sin salir del formulario.
+  4. Personas y observaciones.
+  - Los enlaces **no** se piden: se pueden completar después en el detalle del operador.
+  - Antes de guardar se muestra el resumen en una frase. La casilla "Guardar y agregar otra en la misma sección" deja el formulario abierto con la sección.
+- **Registrar persona** (Hoja): solo nombre completo y celular. Si el celular ya está registrado, se avisa al escribirlo, con enlace a esa persona. Botones "Guardar" y "Guardar y asignar" (pasa a la nueva asignación con la persona elegida). Está en Asignaciones y en Operadores y enlaces.
+- En celular la tabla se apila como tarjetas y los filtros siguen §8.
+
 ### Pantallas pendientes de diseñar
 Se construyen con los mismos componentes y layout:
-- **Asignaciones**: tabla completa filtrable y formulario de alta.
 - **Configuración** (ADMIN): ver §6.
 
 ## 6. Tema configurable (Administración → Configuración)

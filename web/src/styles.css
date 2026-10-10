@@ -788,6 +788,7 @@ a:focus-visible,
   background: var(--surface);
   border-top: 1px solid var(--line);
   display: flex;
+  gap: 10px;
 }
 .barra-movil .btn {
   flex: 1;
