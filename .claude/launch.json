@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "govtrack-web", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "migracion", "run", "dev"], "port": 5173 }
+    { "name": "govtrack-web", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "web", "run", "dev"], "port": 5173 }
   ]
 }

@@ -4,16 +4,16 @@ Sistema para gestionar la estructura territorial de operadores y enlaces por mun
 
 El repositorio contiene:
 
-- **`electron/`**: la app de escritorio actual (Electron + better-sqlite3). Es la versión en uso.
-- **`migracion/`**: el rediseño para la nueva **versión web**. Está en construcción y todavía no reemplaza a la app de escritorio.
-- **`diseno/`**: la guía de diseño de la versión web (`DISENO.md`) y el respaldo de las pantallas aprobadas. Está fuera de `migracion/` para que modificarla no dispare un deploy en Cloudflare.
+- **`desktop/`**: la app de escritorio actual (Electron + better-sqlite3). Es la versión en uso.
+- **`web/`**: el rediseño para la nueva **versión web**. Está en construcción y todavía no reemplaza a la app de escritorio.
+- **`diseno/`**: la guía de diseño de la versión web (`DISENO.md`) y el respaldo de las pantallas aprobadas. Está fuera de `web/` para que modificarla no dispare un deploy en Cloudflare.
 
-## App de escritorio (`electron/`)
+## App de escritorio (`desktop/`)
 
-- Es un proyecto independiente con su propio `package.json` y `node_modules`. Se ejecuta con `cd electron && npm start`. La entrada es `electron/main.js`, las vistas están en `electron/view/*.html` y la lógica en `electron/js/*.js`.
-- `electron/Update.sh` hace `git pull` y `npm install` dentro de `electron/`.
-- Acceso a datos: `electron/js/ipcHandlers.js` (handlers IPC) y `electron/js/db.js` (crea las tablas y aplica migraciones simples al arrancar).
-- La base es `electron/db/GovTrackDB.db` (SQLite). No se versiona y **sus datos son de prueba**.
+- Es un proyecto independiente con su propio `package.json` y `node_modules`. Se ejecuta con `cd desktop && npm start`. La entrada es `desktop/main.js`, las vistas están en `desktop/view/*.html` y la lógica en `desktop/js/*.js`.
+- `desktop/Update.sh` hace `git pull` y `npm install` dentro de `desktop/`.
+- Acceso a datos: `desktop/js/ipcHandlers.js` (handlers IPC) y `desktop/js/db.js` (crea las tablas y aplica migraciones simples al arrancar).
+- La base es `desktop/db/GovTrackDB.db` (SQLite). No se versiona y **sus datos son de prueba**.
 - `better-sqlite3` está compilado para la ABI de Electron, así que no se puede cargar con `node` directamente. Para inspeccionar la BD usa Python (`sqlite3`) o el CLI `sqlite3`.
 - Las tablas actuales y su significado real (los nombres son engañosos):
 
@@ -24,7 +24,7 @@ El repositorio contiene:
   | `Seccion2` | En realidad son **casillas**: una fila por casilla (B, C1, E1…), con su lista nominal (`LN`) y los votos por partido en JSON (`PARTIDOS`). |
   | `Colonias` | Relación colonia ↔ sección. Una colonia puede repetirse en varias secciones. |
 
-## `migracion/`: rediseño para la versión web
+## `web/`: nueva versión web (rediseño)
 
 ### En qué consiste
 
@@ -38,10 +38,10 @@ Se va a pasar de la app de escritorio a una **aplicación web multiusuario** sob
 
 ### Estructura del directorio
 
-`migracion/` es un proyecto independiente (su propio `package.json` y `node_modules`) y es **la raíz del despliegue en Cloudflare**; no depende de nada del resto del repo.
+`web/` es un proyecto independiente (su propio `package.json` y `node_modules`) y es **la raíz del despliegue en Cloudflare**; no depende de nada del resto del repo.
 
 ```
-migracion/
+web/
 ├── src/                 # Frontend React (TypeScript)
 ├── worker/index.ts      # Worker: API con Hono bajo /api/*
 ├── migrations/          # Migraciones D1 (0001_esquema_inicial.sql = esquema completo)
@@ -59,7 +59,7 @@ Stack: **React + Vite + TypeScript** en el frontend; **Hono** en el Worker; **D1
 - Los diseños aprobados están en `diseno/pantallas/*.dc.html`. Son maquetas HTML de referencia, no código que se importe. El lienzo original es https://claude.ai/artifact/NCEy3bEPtkJDFBemoG8SJs
 - Los diseños aprobados no se modifican. Si hace falta un patrón nuevo, se documenta primero en `DISENO.md`.
 
-### Comandos (ejecutar dentro de `migracion/`)
+### Comandos (ejecutar dentro de `web/`)
 
 ```bash
 npm install
@@ -86,14 +86,14 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
   |---|---|
   | Repositorio / rama | `castilloeng/GovTrack2` / `main` |
   | Worker name | `govtrack` (debe coincidir con `name` en `wrangler.jsonc`) |
-  | Root directory (Path) | `migracion` |
+  | Root directory (Path) | `web` |
   | Build command | `npm run build` |
   | Deploy command | `npx wrangler deploy` |
   | Non-production deploy command | `npx wrangler versions upload` |
-  | Build watch paths | Include: `migracion/*` · Exclude (recomendado): `migracion/**/*.md` |
-- **Flujo**: cada push a `main` que toque `migracion/` dispara build y deploy automáticos. Los cambios en `electron/`, `diseno/` o `CLAUDE.md` no publican nada. Alternativa manual: `npm run deploy` desde `migracion/`.
+  | Build watch paths | Include: `web/*` · Exclude (recomendado): `web/**/*.md` |
+- **Flujo**: cada push a `main` que toque `web/` dispara build y deploy automáticos. Los cambios en `desktop/`, `diseno/` o `CLAUDE.md` no publican nada. Alternativa manual: `npm run deploy` desde `web/`.
 - **Base de datos**: el binding de D1 (`DB` → `govtrack`) se toma de `wrangler.jsonc`, no se configura en el panel.
-- **Migraciones**: **no** se aplican en el deploy. Tras agregar una migración nueva, correr `npm run db:migrate:remote` desde `migracion/`.
+- **Migraciones**: **no** se aplican en el deploy. Tras agregar una migración nueva, correr `npm run db:migrate:remote` desde `web/`.
   - La BD remota tiene aplicada la `0001` y contiene los municipios de prueba TAPACHULA y CACAHOATAN.
 - **Seguridad**: sin login, la URL pública expone la API. No cargar datos reales hasta tener autenticación, o proteger la URL con Cloudflare Access.
 
@@ -123,6 +123,6 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 ### Pendiente
 
 - Login con Google y control de acceso por rol/municipio en la API (hoy solo existen `/api/health` y `/api/municipios`, sin autenticación).
-- Script de carga de catálogos desde `electron/db/GovTrackDB.db` o Excel.
+- Script de carga de catálogos desde `desktop/db/GovTrackDB.db` o Excel.
 - Frontend web, siguiendo `diseno/DISENO.md`.
 - Pantalla de Configuración (tema del sitio) y su migración `configuracion`.

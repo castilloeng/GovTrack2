@@ -1,6 +1,6 @@
 # Guía de diseño — GovTrack Web
 
-Esta es la **referencia obligatoria** para construir cualquier interfaz de la versión web (`migracion/src/`). Toda pantalla nueva debe partir de estas reglas y de los diseños de `pantallas/`. Si una pantalla necesita algo que la guía no cubre, primero se agrega aquí y después se implementa.
+Esta es la **referencia obligatoria** para construir cualquier interfaz de la versión web (`web/src/`). Toda pantalla nueva debe partir de estas reglas y de los diseños de `pantallas/`. Si una pantalla necesita algo que la guía no cubre, primero se agrega aquí y después se implementa.
 
 - **Lienzo de diseño (original)**: https://claude.ai/artifact/NCEy3bEPtkJDFBemoG8SJs
 - **Respaldo local**: `pantallas/*.dc.html` es el código de cada pantalla y `pantallas/canvas.json` el acomodo en el lienzo. Son maquetas estáticas en HTML con estilos en línea: sirven para copiar medidas, colores y estructura, no se importan en React.

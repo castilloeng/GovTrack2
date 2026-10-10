@@ -24,7 +24,7 @@ Thumbs.db
 _tmp_*.sql
 
 # Base local de la app de escritorio (datos de prueba)
-electron/db/*.db
-electron/db/*.db-shm
-electron/db/*.db-wal
-electron/GovTrackDB.db
+desktop/db/*.db
+desktop/db/*.db-shm
+desktop/db/*.db-wal
+desktop/GovTrackDB.db
