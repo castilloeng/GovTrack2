@@ -101,7 +101,7 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 - **Flujo**: cada push a `main` que toque `web/` dispara build y deploy automáticos. Los cambios en `desktop/`, `diseno/` o `CLAUDE.md` no publican nada. Alternativa manual: `npm run deploy` desde `web/`.
 - **Base de datos**: el binding de D1 (`DB` → `govtrack`) se toma de `wrangler.jsonc`, no se configura en el panel.
 - **Migraciones**: **no** se aplican en el deploy. Tras agregar una migración nueva, correr `npm run db:migrate:remote` desde `web/`.
-  - La BD remota tiene aplicada la `0001` y contiene los municipios de prueba TAPACHULA y CACAHOATAN. También tiene aplicada la `0002_configuracion.sql` (tema `verde`).
+  - La BD remota tiene aplicada la `0001` y contiene los municipios de prueba TAPACHULA y CACAHOATAN. También tiene aplicada la `0002_configuracion.sql` (tema `verde`). El 2026-10-09 se cargaron los catálogos de prueba de la app de escritorio con `seed_desde_desktop.py --solo-catalogos` (209 secciones, 1,116 colonias, 290 casillas con resultados, proceso 2024 / Ayuntamiento); no tiene personas ni asignaciones.
 - **Secretos del Worker** (`npx wrangler secret put <NOMBRE>`): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `SESSION_SECRET` (cadena aleatoria larga que firma las cookies de sesión; cambiarla cierra todas las sesiones). Si falta alguno, el login redirige a `/login?error=config`.
 - **Seguridad**: toda la API exige sesión salvo `/api/health`, `GET /api/configuracion` y `/api/auth/*`.
 

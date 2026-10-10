@@ -24,7 +24,8 @@ export default function Seccion({ numero }: { numero: number }) {
   const { municipioId, procesoId, municipio, puedeCapturar } = useContexto()
   const [pestana, setPestana] = useState<Pestana>('resultados')
   const [editando, setEditando] = useState(false)
-  const det = useApi<SeccionDetalle>(municipioId && procesoId ? `/municipios/${municipioId}/secciones/${numero}?proceso=${procesoId}` : null)
+  // Sin proceso elegido (p. ej. aún no hay procesos cargados) la API usa el más reciente o ninguno.
+  const det = useApi<SeccionDetalle>(municipioId ? `/municipios/${municipioId}/secciones/${numero}${procesoId ? `?proceso=${procesoId}` : ''}` : null)
   const d = det.datos?.numero === numero && det.datos.municipio_id === municipioId ? det.datos : undefined
   const col = useApi<ColoniaDeSeccion[]>(d ? `/secciones/${d.id}/colonias` : null)
   const colonias = d && col.datos ? col.datos : undefined

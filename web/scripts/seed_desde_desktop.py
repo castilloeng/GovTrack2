@@ -9,6 +9,11 @@ Uso (desde web/):
 
 El SQL BORRA primero los datos de geografía, elección y estructura (no toca usuarios ni
 configuración), así que se puede volver a correr. Pensado para la D1 local: los datos son de prueba.
+
+Con --solo-catalogos genera únicamente secciones, colonias, proceso, casillas y resultados (sin
+personas, enlaces ni asignaciones, y sin borrar esas tablas). Es lo que se cargó en la D1 remota:
+    python scripts/seed_desde_desktop.py --solo-catalogos > .wrangler/catalogos.sql
+    npx wrangler d1 execute govtrack --remote --file .wrangler/catalogos.sql
 """
 
 import json
@@ -55,13 +60,14 @@ def entero(v):
 
 
 def main():
+    solo_catalogos = '--solo-catalogos' in sys.argv[1:]
     db = sqlite3.connect(ORIGEN)
     out = []
     w = out.append
 
     w('-- Generado por scripts/seed_desde_desktop.py')
-    for t in ['operador_asignacion', 'operador_enlace', 'persona', 'resultado', 'casilla', 'eleccion',
-              'proceso_electoral', 'partido', 'seccion_colonia', 'colonia', 'seccion']:
+    estructura = [] if solo_catalogos else ['operador_asignacion', 'operador_enlace', 'persona']
+    for t in estructura + ['resultado', 'casilla', 'eleccion', 'proceso_electoral', 'partido', 'seccion_colonia', 'colonia', 'seccion']:
         w(f'DELETE FROM {t};')
 
     municipios = sorted({limpio(m) for (m,) in db.execute(
@@ -126,6 +132,9 @@ def main():
     # ---------- Personas (únicas por nombre), enlaces y asignaciones ----------
     personas = {}  # nombre -> id
     telefonos = set()
+    asignaciones = set()
+    if solo_catalogos:
+        return emitir(out, secciones, colonias, casillas, personas, asignaciones)
 
     def persona(nombre, tel, m):
         nombre = limpio(nombre)
@@ -145,7 +154,6 @@ def main():
         persona(nombre, tel, m)
 
     enlaces = {}
-    asignaciones = set()
     for row in db.execute('SELECT NOMBRE, TELEFONO, COLONIA, SECCION, NUM_PERSONAS, OBSERVACIONES, '
                           'OPERADOR_ENLACE1, TELEFONO1, OPERADOR_ENLACE2, TELEFONO2, MUNICIPIO FROM ContactoDet'):
         nombre, tel, col, num, npers, obs, e1, t1, e2, t2, m = row
@@ -168,6 +176,10 @@ def main():
         w(f'INSERT INTO operador_asignacion (operador_id, seccion_id, colonia_id, num_personas, observaciones) VALUES '
           f'({oid}, {sid}, {cid}, {entero(npers)}, {q((obs or "").strip() or None)});')
 
+    emitir(out, secciones, colonias, casillas, personas, asignaciones)
+
+
+def emitir(out, secciones, colonias, casillas, personas, asignaciones):
     sys.stdout.reconfigure(encoding='utf-8')
     print('\n'.join(out))
     print(f'-- {len(secciones)} secciones, {len(colonias)} colonias, {len(casillas)} casillas, '
