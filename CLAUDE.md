@@ -64,8 +64,30 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 - `migrations/` sigue la convención de `wrangler d1 migrations`. Los archivos se numeran (`NNNN_descripcion.sql`) y **no se editan una vez aplicados en D1 remoto**: cualquier cambio va en una migración nueva.
 - Los datos de prueba locales se cargan con `npx wrangler d1 execute govtrack --local --command "..."`, no como migraciones.
 - La BD remota `govtrack` ya existe en Cloudflare (su `database_id` está en `wrangler.jsonc`). El binding se llama `DB` (el Worker usa `c.env.DB`); no cambiarlo aunque `wrangler d1 create` sugiera otro nombre.
-- Despliegue: con `wrangler deploy` solo se sube el bundle del Worker y `dist/`. Si se conecta el repo de GitHub a Cloudflare (Workers Builds), configurar **Root directory = `migracion`**.
 - `.claude/launch.json` (en la raíz del repo) define el servidor `govtrack-web` para la vista previa.
+
+### Publicación en Cloudflare
+
+- **URL de producción**: https://govtrack.rosain.workers.dev/ (verificado el 2026-10-09: `/`, `/api/health` y `/api/municipios` responden 200).
+- **Tipo de proyecto**: **Worker** con assets estáticos (Workers Builds conectado a GitHub). **No usar Cloudflare Pages**:
+  - Pages no ejecuta `worker/index.ts`.
+  - `vite build` deja el frontend en `dist/client/` y el Worker en `dist/govtrack/`.
+  - Un intento previo en `govtrack.pages.dev` daba 404 por ambas razones.
+- **Configuración en el panel** (Workers & Pages → govtrack → Settings → Build):
+  | Campo | Valor |
+  |---|---|
+  | Repositorio / rama | `castilloeng/GovTrack2` / `main` |
+  | Worker name | `govtrack` (debe coincidir con `name` en `wrangler.jsonc`) |
+  | Root directory (Path) | `migracion` |
+  | Build command | `npm run build` |
+  | Deploy command | `npx wrangler deploy` |
+  | Non-production deploy command | `npx wrangler versions upload` |
+  | Build watch paths | `migracion/*` |
+- **Flujo**: cada push a `main` que toque `migracion/` dispara build y deploy automáticos. Alternativa manual: `npm run deploy` desde `migracion/`.
+- **Base de datos**: el binding de D1 (`DB` → `govtrack`) se toma de `wrangler.jsonc`, no se configura en el panel.
+- **Migraciones**: **no** se aplican en el deploy. Tras agregar una migración nueva, correr `npm run db:migrate:remote` desde `migracion/`.
+  - La BD remota tiene aplicada la `0001` y contiene los municipios de prueba TAPACHULA y CACAHOATAN.
+- **Seguridad**: sin login, la URL pública expone la API. No cargar datos reales hasta tener autenticación, o proteger la URL con Cloudflare Access.
 
 ### Modelo de datos (resumen)
 
