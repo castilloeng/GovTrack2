@@ -3,6 +3,7 @@ import Shell from '../componentes/Shell'
 import { Encabezado } from '../componentes/ui'
 import { useContexto } from '../componentes/Contexto'
 import { ColoniaForm, NuevaSeccion } from '../componentes/FormulariosGeografia'
+import { usePorPagina } from '../componentes/usePorPagina'
 import { useApi, type ColoniaFila, type Pagina, type SeccionFila } from '../api'
 import { n, nombrePropio, numSeccion } from '../formato'
 import { IcoBuscar, IcoMas } from '../iconos'
@@ -23,19 +24,6 @@ const FILTROS: Record<Vista, { id: string; texto: string }[]> = {
     { id: '', texto: 'Todas' },
     { id: 'sin-operador', texto: 'Sin operador' },
   ],
-}
-
-/** 25 filas en celular y 50 en iPad o escritorio (DISENO.md §8). */
-function usePorPagina() {
-  const consulta = '(min-width: 768px)'
-  const [ancho, setAncho] = useState(() => matchMedia(consulta).matches)
-  useEffect(() => {
-    const mq = matchMedia(consulta)
-    const cambio = () => setAncho(mq.matches)
-    mq.addEventListener('change', cambio)
-    return () => mq.removeEventListener('change', cambio)
-  }, [])
-  return ancho ? 50 : 25
 }
 
 export default function Secciones({ vista }: { vista: Vista }) {

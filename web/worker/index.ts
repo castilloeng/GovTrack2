@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import auth from './auth'
 import { ErrorApi, usuarioActual, type Env } from './comun'
+import estructura from './estructura'
 import geografia from './geografia'
 import { openapi, sinDocumentar } from './openapi'
 
@@ -76,6 +77,9 @@ app.put('/configuracion/tema', async (c) => {
 
 // Procesos, secciones y colonias.
 app.route('/', geografia)
+
+// Operadores, enlaces, personas y asignaciones.
+app.route('/', estructura)
 
 app.notFound((c) => c.json({ error: 'Ruta no encontrada' }, 404))
 

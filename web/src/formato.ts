@@ -5,18 +5,40 @@ const decimal = new Intl.NumberFormat('es-MX', { minimumFractionDigits: 1, maxim
 export const n = (v: number) => entero.format(v)
 export const pct = (v: number) => `${decimal.format(v)} %`
 
-/** "Jorge Ramírez" → "J. Ramírez" */
+const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y'])
+
+/**
+ * Primer apellido, suponiendo "nombre(s) apellido1 apellido2". Las partículas van con la palabra que
+ * sigue ("de la Torre" cuenta como una). Con 2–3 piezas es la segunda; con 4 o más, la penúltima:
+ * "José Luis de la Torre Pérez" → "de la Torre", "Juan Pérez de la Cruz" → "Pérez".
+ */
+function primerApellido(partes: string[]) {
+  const piezas: string[] = []
+  let pendiente: string[] = []
+  for (const p of partes) {
+    pendiente.push(p)
+    if (!PARTICULAS.has(p.toLowerCase())) {
+      piezas.push(pendiente.join(' '))
+      pendiente = []
+    }
+  }
+  if (pendiente.length) piezas.push(pendiente.join(' '))
+  return piezas[piezas.length >= 4 ? piezas.length - 2 : 1] ?? partes[1]
+}
+
+/** "Jorge Ramírez" → "J. Ramírez"; "Mayany Marroquín Pérez" → "M. Marroquín" */
 export function abreviar(nombre: string) {
   const partes = nombre.trim().split(/\s+/)
   if (partes.length < 2) return nombre
-  return `${partes[0][0]}. ${partes[partes.length >= 4 ? 2 : partes.length - 1]}`
+  return `${partes[0][0]}. ${primerApellido(partes)}`
 }
 
 /** "María Elena Cruz Pérez" → "MC" */
 export function iniciales(nombre: string) {
   const partes = nombre.trim().split(/\s+/)
-  const apellido = partes.length >= 4 ? partes[2] : partes[partes.length - 1]
-  return (partes[0][0] + (partes.length > 1 ? apellido[0] : '')).toUpperCase()
+  if (partes.length < 2) return partes[0][0].toUpperCase()
+  const apellido = primerApellido(partes).split(' ').filter((x) => !PARTICULAS.has(x.toLowerCase()))[0] ?? partes[1]
+  return (partes[0][0] + apellido[0]).toUpperCase()
 }
 
 /** Número de sección con 4 dígitos, como en el INE: 812 → "0812". */
@@ -24,8 +46,14 @@ export const numSeccion = (v: number) => String(v).padStart(4, '0')
 
 /** "TAPACHULA" → "Tapachula" (los catálogos del INE vienen en mayúsculas). */
 export function nombrePropio(s: string) {
-  return s.toLowerCase().replace(/(^|[\s(-])(\p{L})/gu, (_, sep: string, l: string) => sep + l.toUpperCase())
+  return s
+    .toLowerCase()
+    .replace(/(^|[\s(-])(\p{L})/gu, (_, sep: string, l: string) => sep + l.toUpperCase())
+    .replace(/ (De|Del|La|Las|Los|Y)(?= )/g, (m) => m.toLowerCase())
 }
+
+/** "9621184402" → "962 118 4402". */
+export const telefono = (t: string | null) => (t && /^\d{10}$/.test(t) ? `${t.slice(0, 3)} ${t.slice(3, 6)} ${t.slice(6)}` : (t ?? ''))
 
 const CARGOS: Record<string, string> = {
   PRESIDENCIA: 'Presidencia',

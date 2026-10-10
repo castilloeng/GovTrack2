@@ -120,6 +120,13 @@ Se implementan como variables CSS en `:root`. Los valores de color dependen del 
   - Si la persona también es enlace de otros, se indica con una etiqueta gris (el rol se deduce, no se guarda).
 - "Dar de baja" hace un borrado lógico (`deleted_at`) y pide confirmación.
 - Los formularios de alta y edición deben validar que la colonia pertenezca a la sección y que el teléfono sea único entre las personas activas.
+- Implementación con datos reales:
+  - El filtro de sección es un campo numérico (hay cientos de secciones); el de enlace es un selector con todos los enlaces del municipio.
+  - En la vista "por enlace", cada fila abre el detalle del enlace (`/operadores/:id` sirve para cualquier persona). El detalle de un enlace lista "Enlace de" con sus operadores.
+  - Los enlaces se cambian con "Cambiar" junto al título (buscador del padrón, 1 o 2 enlaces). Cada asignación tiene "Editar" (personas, observaciones y "Quitar asignación", con confirmación).
+  - "Nuevo operador" pide nombre, teléfono y al menos un enlace. El alta de asignación pide la sección por número y la colonia se elige entre las de esa sección.
+  - No se puede dar de baja a quien es enlace de operadores activos; el mensaje lo explica en la misma hoja.
+  - Los nombres se guardan en mayúsculas y se muestran con mayúscula inicial; las abreviaturas usan el primer apellido ("José Luis de la Torre Pérez" → "J. de la Torre").
 
 ### Detalle de sección (`Seccion.dc.html`)
 - Arriba van la ruta de navegación (Secciones / 0812), el tipo de sección y el resumen: casillas, colonias y lista nominal.

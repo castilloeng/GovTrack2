@@ -128,3 +128,27 @@ export type ColoniaDeSeccion = {
 }
 
 export type EventoHistorial = { tipo: 'alta' | 'baja'; fecha: string; colonia: string; operador: string; usuario: string | null }
+
+export type PersonaBreve = { id: number; nombre: string; telefono: string | null }
+
+export type OperadorFila = PersonaBreve & { enlaces: PersonaBreve[]; colonias: number; personas: number; enlace_de: number }
+
+export type EnlaceFila = PersonaBreve & { operadores: number; colonias: number; personas: number }
+
+export type Asignacion = {
+  id: number
+  seccion_id: number
+  seccion: number
+  colonia_id: number
+  colonia: string
+  num_personas: number
+  observaciones: string | null
+}
+
+export type PersonaDetalle = PersonaBreve & {
+  municipio_id: number
+  deleted_at: string | null
+  enlaces: PersonaBreve[]
+  asignaciones: Asignacion[]
+  enlace_de: { id: number; nombre: string }[]
+}

@@ -17,7 +17,7 @@ const TIPOS_SECCION = [
 const TIPOS_ASENTAMIENTO = ['COLONIA', 'FRACCIONAMIENTO', 'BARRIO', 'EJIDO', 'LOCALIDAD', 'RESIDENCIAL', 'UNIDAD HABITACIONAL', 'CANTON', 'RANCHERIA']
 
 /** Envío con estado de guardado y mensaje de error en línea. */
-function useEnvio(accion: () => Promise<void>) {
+export function useEnvio(accion: () => Promise<void>) {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   async function enviar(e: FormEvent) {
@@ -34,7 +34,7 @@ function useEnvio(accion: () => Promise<void>) {
   return { guardando, error, enviar }
 }
 
-function Formulario({ onSubmit, error, children, guardando, boton }: { onSubmit: (e: FormEvent) => void; error: string; children: ReactNode; guardando: boolean; boton: string }) {
+export function Formulario({ onSubmit, error, children, guardando, boton }: { onSubmit: (e: FormEvent) => void; error: string; children: ReactNode; guardando: boolean; boton: string }) {
   return (
     <form className="pila" style={{ gap: 16 }} onSubmit={onSubmit}>
       {children}

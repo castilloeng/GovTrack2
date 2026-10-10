@@ -143,7 +143,7 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 ### Pendiente
 
 - Carga de catálogos desde Excel (desde el SQLite de escritorio ya existe `web/scripts/seed_desde_desktop.py`).
-- Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`) y los selectores de municipio y proceso ya usan la API; Panel, Operadores e Importar siguen con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
+- Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`), **Operadores y enlaces** (`/operadores`, `/operadores/:id`) y los selectores de municipio y proceso ya usan la API; Panel e Importar siguen con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
 - Diseñar e implementar Asignaciones y Usuarios (hoy muestran "pendiente de diseño").
 
 ### Documentación de la API (OpenAPI)
@@ -152,6 +152,12 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 - La especificación (OpenAPI 3.1) se sirve en `GET /api/openapi.json` y se consulta en **Administración → API** (`/api-docs`, solo ADMIN), que permite descargarla.
 - `/api/openapi.json` compara la especificación con las rutas registradas en el Worker (`app.routes`) y lista las que faltan en `x-sin-documentar`; la pantalla las muestra como alerta. Antes de terminar un cambio a la API, verifica que esa lista esté vacía.
 - Para validarla: `npx @redocly/cli lint http://localhost:5173/api/openapi.json` (o sobre un archivo descargado).
+
+### API de operadores y enlaces (`web/worker/estructura.ts`)
+
+- Lecturas: `GET /api/municipios/:mid/operadores` (paginado; `?q=`, `?seccion=` número, `?enlace=` id), `GET /api/municipios/:mid/enlaces` (sin paginar; `?q=`, `?seccion=`), `GET /api/municipios/:mid/personas?q=` (buscador del padrón, máx. 20) y `GET /api/personas/:id` (enlaces, asignaciones vigentes y "enlace de").
+- Escrituras (ADMIN o CAPTURISTA): `POST /api/municipios/:mid/personas` (con `enlaces` crea un operador), `PATCH /api/personas/:id`, `PUT /api/personas/:id/enlaces`, `DELETE /api/personas/:id` (baja lógica de la persona y sus asignaciones; no si es enlace de operadores activos), `POST /api/personas/:id/asignaciones`, `PATCH` y `DELETE /api/asignaciones/:id` (baja lógica).
+- Es operador quien tiene asignaciones vigentes o enlaces; es enlace quien aparece en `operador_enlace` de un operador activo. El detalle de cada ruta está en la especificación OpenAPI.
 
 ### API de secciones y colonias (`web/worker/geografia.ts`)
 

@@ -14,6 +14,12 @@ const query = (name: string, description: string, schema: Obj = { type: 'string'
 
 const MID = path('mid', 'Id del municipio.')
 const SID = path('id', 'Id de la sección.')
+const PID = path('id', 'Id de la persona.')
+const AID = path('id', 'Id de la asignación.')
+const FILTROS_PERSONA = [
+  query('q', 'Parte del nombre o del teléfono (desde 3 dígitos).'),
+  query('seccion', 'Número de sección.', { type: 'integer' }),
+]
 const PAGINA = [
   query('pagina', 'Página (desde 1).', { type: 'integer', minimum: 1, default: 1 }),
   query('limite', 'Filas por página.', { type: 'integer', minimum: 1, maximum: 100, default: 50 }),
@@ -53,6 +59,7 @@ export const openapi = {
     { name: 'Configuración', description: 'Ajustes globales del sitio.' },
     { name: 'Secciones', description: 'Secciones electorales, casillas y resultados.' },
     { name: 'Colonias', description: 'Colonias y su relación con las secciones.' },
+    { name: 'Estructura', description: 'Personas (padrón), operadores, enlaces y asignaciones. El rol se deduce de las relaciones.' },
   ],
   components: {
     securitySchemes: {
@@ -173,6 +180,70 @@ export const openapi = {
           tipo_asentamiento: nullable('string', { examples: ['COLONIA', 'FRACCIONAMIENTO', 'EJIDO'] }),
           cp: nullable('string', { pattern: '^\\d{5}$' }),
         },
+      },
+      PersonaBreve: {
+        type: 'object',
+        properties: { id: int, nombre: { type: 'string' }, telefono: nullable('string', { pattern: '^\\d{10}$' }) },
+      },
+      OperadorFila: {
+        type: 'object',
+        properties: {
+          id: int,
+          nombre: { type: 'string' },
+          telefono: nullable('string'),
+          enlaces: { type: 'array', items: ref('PersonaBreve'), description: '1 o 2, en orden.' },
+          colonias: { ...int, description: 'Asignaciones vigentes (sección + colonia).' },
+          personas: { ...int, description: 'Personas movilizadas en total.' },
+          enlace_de: { ...int, description: 'Operadores activos de los que también es enlace.' },
+        },
+      },
+      EnlaceFila: {
+        type: 'object',
+        properties: {
+          id: int,
+          nombre: { type: 'string' },
+          telefono: nullable('string'),
+          operadores: int,
+          colonias: { ...int, description: 'Pares sección + colonia distintos de sus operadores.' },
+          personas: int,
+        },
+      },
+      Asignacion: {
+        type: 'object',
+        properties: {
+          id: int,
+          seccion_id: int,
+          seccion: { ...int, description: 'Número de sección.' },
+          colonia_id: int,
+          colonia: { type: 'string' },
+          num_personas: int,
+          observaciones: nullable('string'),
+        },
+      },
+      PersonaDetalle: {
+        type: 'object',
+        properties: {
+          id: int,
+          nombre: { type: 'string' },
+          telefono: nullable('string'),
+          municipio_id: int,
+          deleted_at: nullable('string', { format: 'date-time' }),
+          enlaces: { type: 'array', items: ref('PersonaBreve') },
+          asignaciones: { type: 'array', items: ref('Asignacion'), description: 'Solo las vigentes.' },
+          enlace_de: { type: 'array', items: { type: 'object', properties: { id: int, nombre: { type: 'string' } } }, description: 'Operadores activos de los que es enlace.' },
+        },
+      },
+      PersonaEntrada: {
+        type: 'object',
+        description: 'El nombre se guarda en mayúsculas; el teléfono, como 10 dígitos (se ignoran espacios y guiones) y es único entre personas activas.',
+        properties: { nombre: { type: 'string' }, telefono: nullable('string', { examples: ['962 118 4402'] }) },
+      },
+      Enlaces: {
+        type: 'array',
+        items: int,
+        minItems: 1,
+        maxItems: 2,
+        description: 'Ids de personas activas del mismo municipio, distintas del operador. El orden define enlace 1 y 2.',
       },
     },
   },
@@ -365,6 +436,118 @@ export const openapi = {
         parameters: [path('id', 'Id de la colonia.')],
         requestBody: cuerpo(ref('ColoniaEntrada')),
         responses: { '200': json(Ok), ...ESCRITURA, '404': err('La colonia no existe.'), '409': err('Ya existe una colonia con ese nombre y CP.') },
+      },
+    },
+    '/municipios/{mid}/operadores': {
+      get: {
+        tags: ['Estructura'],
+        summary: 'Operadores del municipio',
+        description: 'Personas activas con asignaciones vigentes o con enlaces, ordenadas por nombre.',
+        parameters: [MID, ...FILTROS_PERSONA, query('enlace', 'Solo operadores con este enlace (id).', { type: 'integer' }), ...PAGINA],
+        responses: {
+          '200': json({ type: 'object', properties: { total: int, filas: { type: 'array', items: ref('OperadorFila') } } }),
+          ...LECTURA_MUNICIPIO,
+        },
+      },
+    },
+    '/municipios/{mid}/enlaces': {
+      get: {
+        tags: ['Estructura'],
+        summary: 'Enlaces del municipio (vista por enlace)',
+        description: 'Personas que son enlace de al menos un operador activo, con sus totales. No se pagina. Con `seccion` solo cuentan las asignaciones de esa sección.',
+        parameters: [MID, ...FILTROS_PERSONA],
+        responses: { '200': json({ type: 'array', items: ref('EnlaceFila') }), ...LECTURA_MUNICIPIO },
+      },
+    },
+    '/municipios/{mid}/personas': {
+      get: {
+        tags: ['Estructura'],
+        summary: 'Buscar en el padrón',
+        description: 'Personas activas del municipio (para elegir enlaces). Máximo 20.',
+        parameters: [MID, query('q', 'Parte del nombre o del teléfono.')],
+        responses: { '200': json({ type: 'array', items: ref('PersonaBreve') }), ...LECTURA_MUNICIPIO },
+      },
+      post: {
+        tags: ['Estructura'],
+        summary: 'Alta de persona u operador',
+        description: 'Con `enlaces` queda como operador con sus 1 o 2 enlaces.',
+        parameters: [MID],
+        requestBody: cuerpo({ allOf: [ref('PersonaEntrada'), { type: 'object', required: ['nombre'], properties: { enlaces: ref('Enlaces') } }] }),
+        responses: { '201': json({ type: 'object', properties: { id: int } }, 'Creada'), ...ESCRITURA, '409': err('El teléfono ya está registrado.') },
+      },
+    },
+    '/personas/{id}': {
+      get: {
+        tags: ['Estructura'],
+        summary: 'Detalle de persona',
+        description: 'Enlaces, asignaciones vigentes y operadores de los que es enlace.',
+        parameters: [PID],
+        responses: { '200': json(ref('PersonaDetalle')), '404': err('La persona no existe.'), ...LECTURA_MUNICIPIO },
+      },
+      patch: {
+        tags: ['Estructura'],
+        summary: 'Editar nombre y teléfono',
+        description: 'Solo cambia los campos presentes en el cuerpo.',
+        parameters: [PID],
+        requestBody: cuerpo(ref('PersonaEntrada')),
+        responses: { '200': json(Ok), ...ESCRITURA, '404': err('La persona no existe.'), '409': err('Dada de baja o teléfono ya registrado.') },
+      },
+      delete: {
+        tags: ['Estructura'],
+        summary: 'Dar de baja',
+        description: 'Baja lógica (`deleted_at`) de la persona y de sus asignaciones vigentes. No se permite si es enlace de operadores activos.',
+        parameters: [PID],
+        responses: {
+          '200': json({ type: 'object', properties: { ok: { type: 'boolean' }, asignaciones: { ...int, description: 'Asignaciones dadas de baja.' } } }),
+          ...ESCRITURA,
+          '404': err('La persona no existe.'),
+          '409': err('Ya está dada de baja o es enlace de operadores activos.'),
+        },
+      },
+    },
+    '/personas/{id}/enlaces': {
+      put: {
+        tags: ['Estructura'],
+        summary: 'Cambiar los enlaces del operador',
+        description: 'Reemplaza los enlaces; aplican a todas las asignaciones del operador.',
+        parameters: [PID],
+        requestBody: cuerpo({ type: 'object', required: ['enlaces'], properties: { enlaces: ref('Enlaces') } }),
+        responses: { '200': json(Ok), ...ESCRITURA, '404': err('La persona no existe.'), '409': err('La persona está dada de baja.') },
+      },
+    },
+    '/personas/{id}/asignaciones': {
+      post: {
+        tags: ['Estructura'],
+        summary: 'Asignar el operador a una colonia',
+        description: 'La colonia debe pertenecer a la sección y la sección al municipio del operador.',
+        parameters: [PID],
+        requestBody: cuerpo({
+          type: 'object',
+          required: ['seccion_id', 'colonia_id'],
+          properties: { seccion_id: int, colonia_id: int, num_personas: { type: 'integer', minimum: 0, default: 0 }, observaciones: nullable('string') },
+        }),
+        responses: {
+          '201': json({ type: 'object', properties: { id: int } }, 'Creada'),
+          ...ESCRITURA,
+          '404': err('La persona no existe.'),
+          '409': err('Ya está asignado a esa colonia en esa sección, o la persona está dada de baja.'),
+        },
+      },
+    },
+    '/asignaciones/{id}': {
+      patch: {
+        tags: ['Estructura'],
+        summary: 'Editar personas y observaciones',
+        parameters: [AID],
+        requestBody: cuerpo({ type: 'object', properties: { num_personas: { type: 'integer', minimum: 0 }, observaciones: nullable('string') } }),
+        responses: { '200': json(Ok), ...ESCRITURA, '404': err('No existe o ya fue dada de baja.') },
+      },
+      delete: {
+        tags: ['Estructura'],
+        summary: 'Quitar asignación',
+        description: 'Baja lógica; queda en el historial de la sección.',
+        parameters: [AID],
+        responses: { '200': json(Ok), ...ESCRITURA, '404': err('No existe o ya fue dada de baja.') },
       },
     },
   } as Record<string, Obj>,
