@@ -12,9 +12,7 @@
     {
       "binding": "DB",
       "database_name": "govtrack",
-      // Reemplazar por el id real al crear la BD remota (npx wrangler d1 create govtrack).
-      // Para desarrollo local cualquier valor sirve.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "f5beeea4-5e7f-4bc5-915e-8dbe1f116fa2",
       "migrations_dir": "migrations"
     }
   ]

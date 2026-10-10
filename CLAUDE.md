@@ -63,7 +63,7 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 
 - `migrations/` sigue la convención de `wrangler d1 migrations`. Los archivos se numeran (`NNNN_descripcion.sql`) y **no se editan una vez aplicados en D1 remoto**: cualquier cambio va en una migración nueva.
 - Los datos de prueba locales se cargan con `npx wrangler d1 execute govtrack --local --command "..."`, no como migraciones.
-- `database_id` en `wrangler.jsonc` es un placeholder. Antes del primer deploy: `npx wrangler d1 create govtrack`, poner el id real y correr `npm run db:migrate:remote`.
+- La BD remota `govtrack` ya existe en Cloudflare (su `database_id` está en `wrangler.jsonc`). El binding se llama `DB` (el Worker usa `c.env.DB`); no cambiarlo aunque `wrangler d1 create` sugiera otro nombre.
 - Despliegue: con `wrangler deploy` solo se sube el bundle del Worker y `dist/`. Si se conecta el repo de GitHub a Cloudflare (Workers Builds), configurar **Root directory = `migracion`**.
 - `.claude/launch.json` (en la raíz del repo) define el servidor `govtrack-web` para la vista previa.
 
