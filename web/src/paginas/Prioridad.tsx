@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Shell from '../componentes/Shell'
-import { Encabezado } from '../componentes/ui'
+import { Barra, Encabezado } from '../componentes/ui'
 import { useContexto } from '../componentes/Contexto'
 import { usePorPagina } from '../componentes/usePorPagina'
 import { useApi, type CategoriaPrioridad, type PrioridadDatos } from '../api'
@@ -9,22 +9,28 @@ import { n, nombreCargo, numSeccion, pct } from '../formato'
 import { IcoFlecha } from '../iconos'
 import { Link } from '../router'
 
-// Prioridad por sección (DISENO.md §5 "Prioridad"). Es una PROYECCIÓN: los votos son de la elección
-// registrada y las personas de la estructura son la meta para la siguiente elección.
+// Prioridad por sección (DISENO.md §5 "Prioridad"). La estructura es el voto con el que sí se cuenta: se mide
+// si la meta de personas comprometidas para la siguiente elección alcanza por sí sola los votos para ganar
+// (votos del ganador de la elección registrada + 1), con la efectividad de Configuración.
 
 const CATEGORIA: Record<CategoriaPrioridad, { etiqueta: string; nombre: string; clase: '' | 'warn' | 'gray' }> = {
-  prioridad: { etiqueta: 'Prioridad', nombre: 'Competida, la meta no alcanza', clase: 'warn' },
-  cubierta: { etiqueta: 'Cubierta', nombre: 'Competida, la meta alcanza', clase: '' },
-  apuesta: { etiqueta: 'Apuesta', nombre: 'Perdida, la meta alcanza para voltearla', clase: 'gray' },
-  abrir: { etiqueta: 'Abrir', nombre: 'Perdida, la meta no alcanza', clase: 'gray' },
-  bastion: { etiqueta: 'Bastión', nombre: 'Ganada con ventaja', clase: '' },
+  prioridad: { etiqueta: 'Prioridad', nombre: 'Competida, la estructura no cubre', clase: 'warn' },
+  reforzar: { etiqueta: 'Reforzar', nombre: 'Ganada, la estructura no cubre', clase: 'gray' },
+  abrir: { etiqueta: 'Abrir', nombre: 'Perdida, la estructura no cubre', clase: 'gray' },
+  cubierta: { etiqueta: 'Cubierta', nombre: 'Competida, la estructura cubre', clase: '' },
+  apuesta: { etiqueta: 'Apuesta', nombre: 'Perdida, la estructura cubre', clase: 'gray' },
+  bastion: { etiqueta: 'Bastión', nombre: 'Ganada, la estructura cubre', clase: '' },
 }
+
+const FILAS_MATRIZ: { texto: string; sin: CategoriaPrioridad; con: CategoriaPrioridad }[] = [
+  { texto: 'Ganada', sin: 'reforzar', con: 'bastion' },
+  { texto: 'Competida', sin: 'prioridad', con: 'cubierta' },
+  { texto: 'Perdida', sin: 'abrir', con: 'apuesta' },
+]
 
 const decimal = new Intl.NumberFormat('es-MX', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
 /** Puntos con signo: +4.2, −3.1 (signo menos tipográfico). */
 const puntos = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + decimal.format(Math.abs(v))
-
-const porcentaje = (parte: number, total: number) => (total > 0 ? (parte / total) * 100 : 0)
 
 function Etiqueta({ categoria }: { categoria: CategoriaPrioridad }) {
   const c = CATEGORIA[categoria]
@@ -65,7 +71,7 @@ export default function Prioridad() {
       <main className="contenido">
         <Encabezado
           titulo="Prioridad por sección"
-          desc={`Proyección para la siguiente elección: el resultado ${propio ? `de ${propio} ` : ''}en ${registrada} más la meta de personas de la estructura.`}
+          desc={`Si la estructura de ${propio ?? 'el partido propio'}, por sí sola, alcanza los votos con los que se ganó cada sección en ${registrada}.`}
         >
           {elecciones.length > 1 && (
             <label className="btn btn-select">
@@ -116,31 +122,30 @@ export default function Prioridad() {
                 <div className="num kpi-num">
                   {n(prio.secciones)} <small>/ {n(conResultados)}</small>
                 </div>
-                <div className="kpi-ctx">competidas donde la meta no alcanza</div>
+                <div className="kpi-ctx">competidas que la estructura no cubre</div>
+              </div>
+              <div className="card kpi">
+                <div className="kpi-lbl">Cobertura de la estructura</div>
+                <div className="num kpi-num">{pct(m.cobertura)}</div>
+                <div style={{ marginTop: 12 }}>
+                  <Barra valor={m.cobertura} alerta={m.cobertura < 100} />
+                </div>
+                <div className="kpi-ctx">
+                  <span className="num">{n(Math.round(m.votos_estructura))}</span> de <span className="num">{n(m.para_ganar)}</span> votos para ganar
+                </div>
+              </div>
+              <div className="card kpi">
+                <div className="kpi-lbl">Secciones cubiertas</div>
+                <div className="num kpi-num">
+                  {n(m.secciones_cubiertas)} <small>/ {n(conResultados)}</small>
+                </div>
+                <div className="kpi-ctx">la estructura alcanza para ganar</div>
               </div>
               <div className="card kpi">
                 <div className="kpi-lbl">Personas por comprometer</div>
                 <div className="num kpi-num">{n(prio.faltan)}</div>
-                <div className="kpi-ctx">para asegurar las secciones prioritarias</div>
-              </div>
-              <div className="card kpi">
-                <div className="kpi-lbl">Margen {anio ?? ''}</div>
-                <div className="num kpi-num">{puntos(m.margen)}</div>
                 <div className="kpi-ctx">
-                  {propio} <span className="num">{pct(porcentaje(m.propio, m.votos))}</span>
-                  {m.rival && (
-                    <>
-                      {' '}
-                      vs {m.rival} <span className="num">{pct(porcentaje(m.votos_rival, m.votos))}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="card kpi">
-                <div className="kpi-lbl">Margen proyectado</div>
-                <div className="num kpi-num">{puntos(m.proyeccion)}</div>
-                <div className="kpi-ctx">
-                  meta de <span className="num">{n(m.personas)}</span> personas al <span className="num">{n(datos.efectividad)} %</span>
+                  en las prioritarias · <span className="num">{n(m.faltan)}</span> en todo el municipio
                 </div>
               </div>
             </div>
@@ -150,7 +155,7 @@ export default function Prioridad() {
                 <div>
                   <h2>Matriz de prioridad</h2>
                   <div className="nota" style={{ marginTop: 2 }}>
-                    {registrada} · toca una celda para filtrar la tabla
+                    Filas: resultado en {registrada} · toca una celda para filtrar la tabla
                   </div>
                 </div>
                 {categoria && (
@@ -161,20 +166,15 @@ export default function Prioridad() {
               </div>
               <div className="matriz" role="group" aria-label="Filtrar por categoría">
                 <span className="matriz-esquina" aria-hidden="true" />
-                <span className="matriz-col">La meta no alcanza</span>
-                <span className="matriz-col">La meta alcanza</span>
-                <span className="matriz-fila">Ganada</span>
-                <Celda cat="bastion" datos={datos} categoria={categoria} onElegir={setCategoria} ancha />
-                <span className="matriz-fila">Competida</span>
-                <Celda cat="prioridad" datos={datos} categoria={categoria} onElegir={setCategoria} />
-                <Celda cat="cubierta" datos={datos} categoria={categoria} onElegir={setCategoria} />
-                <span className="matriz-fila">Perdida</span>
-                <Celda cat="abrir" datos={datos} categoria={categoria} onElegir={setCategoria} />
-                <Celda cat="apuesta" datos={datos} categoria={categoria} onElegir={setCategoria} />
+                <span className="matriz-col">La estructura no cubre</span>
+                <span className="matriz-col">La estructura cubre</span>
+                {FILAS_MATRIZ.map((f) => (
+                  <MatrizFila key={f.texto} {...f} datos={datos} categoria={categoria} onElegir={setCategoria} />
+                ))}
               </div>
               <p className="card-foot">
-                Los votos son de {registrada}; la meta es para la siguiente elección. Se cuenta el {n(datos.efectividad)} % de las personas comprometidas como
-                votos nuevos, y la meta alcanza si con ellos la sección quedaría ganada por al menos {n(datos.umbral_margen)} puntos. Ganada y perdida: por más de{' '}
+                Votos para ganar: los del ganador de cada sección en {registrada} + 1. La estructura cubre la sección si su meta, al {n(datos.efectividad)} % de
+                efectividad (de cada 100 comprometidos, cuántos se espera que voten por {propio}), alcanza esos votos. Ganada y perdida: por más de{' '}
                 {n(datos.umbral_margen)} puntos.
                 {datos.sin_resultados > 0 && ` ${n(datos.sin_resultados)} secciones sin resultados no entran en la matriz.`}
               </p>
@@ -191,66 +191,56 @@ export default function Prioridad() {
                       <th>Sección</th>
                       <th>Categoría</th>
                       <th className="r">Margen {anio ?? ''}</th>
-                      <th>Diferencia</th>
-                      <th className="col-sec">Rival</th>
+                      <th className="col-sec">Ganó</th>
+                      <th className="r">Para ganar</th>
                       <th className="r">Meta</th>
-                      <th className="r col-sec">Necesarias</th>
-                      <th>Faltan</th>
-                      <th className="r col-sec">Proyección</th>
+                      <th className="r col-sec">Votos estructura</th>
+                      <th>Cobertura</th>
+                      <th className="r">Faltan</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {datos.filas.map((s) => {
-                      const dif = s.propio - s.votos_rival
-                      return (
-                        <tr key={s.id}>
-                          <td>
-                            <Link to={`/secciones/${s.numero}`} className="num" style={{ fontWeight: 500 }}>
-                              <span className="solo-movil">Sección </span>
-                              {numSeccion(s.numero)}
-                            </Link>
-                          </td>
-                          <td data-label="Categoría">
-                            <Etiqueta categoria={s.categoria} />
-                          </td>
-                          <td className="r num" data-label={`Margen ${anio ?? ''}`}>
-                            {puntos(s.margen)}
-                          </td>
-                          <td data-label="Diferencia">
-                            <span>
-                              {dif > 0 ? 'Ganó' : dif < 0 ? 'Perdió' : 'Empató'}
-                              {dif !== 0 && (
-                                <>
-                                  {' '}
-                                  por <span className="num">{n(Math.abs(dif))}</span>
-                                </>
-                              )}
+                    {datos.filas.map((s) => (
+                      <tr key={s.id}>
+                        <td>
+                          <Link to={`/secciones/${s.numero}`} className="num" style={{ fontWeight: 500 }}>
+                            <span className="solo-movil">Sección </span>
+                            {numSeccion(s.numero)}
+                          </Link>
+                        </td>
+                        <td data-label="Categoría">
+                          <Etiqueta categoria={s.categoria} />
+                        </td>
+                        <td className="r num" data-label={`Margen ${anio ?? ''}`}>
+                          {puntos(s.margen)}
+                        </td>
+                        <td className="col-sec" data-label="Ganó">
+                          <span>
+                            {s.ganador} <span className="num">{n(s.votos_ganador)}</span>
+                          </span>
+                        </td>
+                        <td className="r num" data-label="Para ganar">
+                          {n(s.para_ganar)}
+                        </td>
+                        <td className="r num" data-label="Meta">
+                          {s.operadores === 0 ? <span className="tag warn">Sin operador</span> : n(s.personas)}
+                        </td>
+                        <td className="r num col-sec" data-label="Votos estructura">
+                          {n(Math.round(s.votos_estructura))}
+                        </td>
+                        <td data-label="Cobertura" className="ancho">
+                          <div className="cobertura">
+                            <Barra valor={s.cobertura} alerta={s.cobertura < 100} />
+                            <span className="num" style={{ fontSize: 13 }}>
+                              {pct(s.cobertura)}
                             </span>
-                          </td>
-                          <td className="col-sec" data-label="Rival">
-                            {s.rival ?? '—'}
-                          </td>
-                          <td className="r num" data-label="Meta">
-                            {s.operadores === 0 ? <span className="tag warn">Sin operador</span> : n(s.personas)}
-                          </td>
-                          <td className="r num col-sec" data-label="Necesarias">
-                            {s.necesarias === 0 ? '—' : n(s.necesarias)}
-                          </td>
-                          <td data-label="Faltan">
-                            {s.necesarias === 0 ? (
-                              <span className="nota">No requiere</span>
-                            ) : s.faltan === 0 ? (
-                              <span className="tag">Alcanza</span>
-                            ) : (
-                              <span className="num">{n(s.faltan)}</span>
-                            )}
-                          </td>
-                          <td className="r num col-sec" data-label="Proyección">
-                            {puntos(s.proyeccion)}
-                          </td>
-                        </tr>
-                      )
-                    })}
+                          </div>
+                        </td>
+                        <td className="r num" data-label="Faltan">
+                          {s.faltan === 0 ? <span className="tag">Cubre</span> : n(s.faltan)}
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
                 {datos.filas.length === 0 && <div className="vacio">No hay secciones en esta categoría.</div>}
@@ -281,38 +271,47 @@ export default function Prioridad() {
   )
 }
 
-/** Celda de la matriz: filtra la tabla por su categoría (otra vez, quita el filtro). */
-function Celda({
-  cat,
+function MatrizFila({
+  texto,
+  sin,
+  con,
   datos,
   categoria,
   onElegir,
-  ancha = false,
 }: {
-  cat: CategoriaPrioridad
+  texto: string
+  sin: CategoriaPrioridad
+  con: CategoriaPrioridad
   datos: PrioridadDatos
   categoria: CategoriaPrioridad | null
   onElegir: (c: CategoriaPrioridad | null) => void
-  ancha?: boolean
 }) {
-  const celda = datos.matriz[cat]
-  const elegida = categoria === cat
-  const falta = cat === 'prioridad' || cat === 'abrir'
   return (
-    <button
-      type="button"
-      className={'matriz-celda' + (ancha ? ' ancha' : '')}
-      aria-pressed={elegida}
-      aria-label={`${CATEGORIA[cat].nombre}: ${celda.secciones} secciones`}
-      onClick={() => onElegir(elegida ? null : cat)}
-    >
-      <Etiqueta categoria={cat} />
-      <span className="num matriz-num">
-        {n(celda.secciones)} <small>secc.</small>
-      </span>
-      <span className="nota">
-        {falta ? 'Faltan' : 'Meta'} <span className="num">{n(falta ? celda.faltan : celda.personas)}</span> personas
-      </span>
-    </button>
+    <>
+      <span className="matriz-fila">{texto}</span>
+      {[sin, con].map((cat) => {
+        const celda = datos.matriz[cat]
+        const elegida = categoria === cat
+        const falta = cat === sin
+        return (
+          <button
+            key={cat}
+            type="button"
+            className="matriz-celda"
+            aria-pressed={elegida}
+            aria-label={`${CATEGORIA[cat].nombre}: ${celda.secciones} secciones`}
+            onClick={() => onElegir(elegida ? null : cat)}
+          >
+            <Etiqueta categoria={cat} />
+            <span className="num matriz-num">
+              {n(celda.secciones)} <small>secc.</small>
+            </span>
+            <span className="nota">
+              {falta ? 'Faltan' : 'Meta'} <span className="num">{n(falta ? celda.faltan : celda.personas)}</span> personas
+            </span>
+          </button>
+        )
+      })}
+    </>
   )
 }

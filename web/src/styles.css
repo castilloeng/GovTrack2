@@ -409,9 +409,6 @@ a:focus-visible,
   text-align: left;
   cursor: pointer;
 }
-.matriz-celda.ancha {
-  grid-column: span 2;
-}
 .matriz-celda[aria-pressed='true'] {
   border-color: var(--accent);
   background: var(--accent-soft);

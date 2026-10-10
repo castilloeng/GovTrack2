@@ -195,7 +195,7 @@ export type PanelDatos = {
 export type Partido = { id: number; siglas: string; nombre: string | null }
 
 /** Categorías de Prioridad, en orden. Ver worker/prioridad.ts. */
-export type CategoriaPrioridad = 'prioridad' | 'cubierta' | 'apuesta' | 'abrir' | 'bastion'
+export type CategoriaPrioridad = 'prioridad' | 'reforzar' | 'abrir' | 'cubierta' | 'apuesta' | 'bastion'
 
 export type PrioridadFila = {
   id: number
@@ -207,14 +207,20 @@ export type PrioridadFila = {
   votos_rival: number
   /** Puntos en la elección registrada: (propio − rival) / votos × 100. */
   margen: number
+  ganador: string
+  votos_ganador: number
+  /** Votos del ganador + 1. */
+  para_ganar: number
   operadores: number
   /** Meta: personas comprometidas para la siguiente elección. */
   personas: number
-  /** Personas que harían falta para quedar ganada por `umbral_margen` puntos. */
+  /** personas × efectividad. */
+  votos_estructura: number
+  /** votos_estructura / para_ganar, en %. */
+  cobertura: number
+  /** Personas para cubrir los votos para ganar. */
   necesarias: number
   faltan: number
-  /** Margen proyectado con la meta y la efectividad, en puntos. */
-  proyeccion: number
   ln: number
 }
 
@@ -223,16 +229,18 @@ export type PrioridadDatos = Pagina<PrioridadFila> & {
   proceso_id: number | null
   eleccion: { id: number; cargo: string } | null
   umbral_margen: number
-  /** % de las personas comprometidas que se cuentan como votos nuevos. */
+  /** % de las personas comprometidas que se espera que voten por el partido. */
   efectividad: number
+  /** Totales de las secciones con resultados. */
   municipio: {
     votos: number
     propio: number
-    rival: string | null
-    votos_rival: number
-    margen: number
+    para_ganar: number
     personas: number
-    proyeccion: number
+    votos_estructura: number
+    cobertura: number
+    secciones_cubiertas: number
+    faltan: number
     ln: number
   } | null
   matriz: Record<CategoriaPrioridad, { secciones: number; ln: number; personas: number; faltan: number }>

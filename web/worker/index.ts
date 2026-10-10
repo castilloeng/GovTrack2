@@ -94,7 +94,7 @@ app.put('/configuracion/tema', async (c) => {
 })
 
 // Ajustes de Prioridad (solo ADMIN): `partido_propio` (siglas del catálogo, o null para quitarlo) y
-// `efectividad` (1–100: % de las personas comprometidas que se cuentan como votos nuevos).
+// `efectividad` (1–100: % de las personas comprometidas que se espera que voten por el partido).
 app.patch('/configuracion', async (c) => {
   const u = (await usuarioActual(c))!
   if (u.rol !== 'ADMIN') throw new ErrorApi(403, 'Solo el administrador puede cambiar la configuración')

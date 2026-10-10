@@ -62,7 +62,7 @@ export const openapi = {
     { name: 'Secciones', description: 'Secciones electorales, casillas y resultados.' },
     { name: 'Colonias', description: 'Colonias y su relación con las secciones.' },
     { name: 'Panel', description: 'Indicadores del municipio, resultados y actividad reciente.' },
-    { name: 'Prioridad', description: 'Proyección: resultado registrado del partido propio + meta de la estructura para la siguiente elección.' },
+    { name: 'Prioridad', description: 'Si la estructura del partido propio alcanza por sí sola los votos para ganar cada sección.' },
     { name: 'Usuarios', description: 'Usuarios del sitio, su rol y sus municipios. Solo ADMIN. No se borran: se desactivan.' },
     { name: 'Estructura', description: 'Personas (padrón), operadores, enlaces y asignaciones. El rol se deduce de las relaciones.' },
   ],
@@ -345,11 +345,10 @@ export const openapi = {
       },
       CategoriaPrioridad: {
         type: 'string',
-        enum: ['prioridad', 'cubierta', 'apuesta', 'abrir', 'bastion'],
+        enum: ['prioridad', 'reforzar', 'abrir', 'cubierta', 'apuesta', 'bastion'],
         description:
-          'En orden de prioridad. `bastion`: ganada por más de `margen` puntos. Competidas: `prioridad` (la meta no alcanza) o `cubierta` (alcanza). ' +
-          'Perdidas por más de `margen`: `apuesta` (alcanza) o `abrir` (no alcanza). La meta alcanza si, con el `efectividad` % de las personas como votos nuevos, ' +
-          'la sección quedaría ganada por al menos `margen` puntos.',
+          'En orden de prioridad. Banda del margen registrado (`ganada` > +`margen`, `competida`, `perdida` < −`margen`) × si la estructura cubre los votos para ganar. ' +
+          'No cubre: `prioridad` (competida), `reforzar` (ganada), `abrir` (perdida). Cubre: `cubierta` (competida), `apuesta` (perdida), `bastion` (ganada).',
       },
       PrioridadFila: {
         type: 'object',
@@ -362,11 +361,15 @@ export const openapi = {
           rival: nullable('string', { description: 'Siglas del partido más votado distinto del propio.' }),
           votos_rival: int,
           margen: { type: 'number', description: '(propio − rival) / votos × 100, en puntos, con un decimal.' },
+          ganador: { type: 'string', description: 'Siglas del partido más votado (puede ser el propio).' },
+          votos_ganador: int,
+          para_ganar: { ...int, description: 'Votos para ganar: votos_ganador + 1.' },
           operadores: int,
           personas: { ...int, description: 'Meta: personas comprometidas para la siguiente elección (asignaciones vigentes).' },
-          necesarias: { ...int, description: 'Personas que harían falta para quedar ganada por `margen` puntos con la efectividad.' },
+          votos_estructura: { type: 'number', description: 'personas × efectividad.' },
+          cobertura: { type: 'number', description: 'votos_estructura / para_ganar × 100. La estructura cubre la sección desde 100.' },
+          necesarias: { ...int, description: 'Personas para cubrir los votos para ganar: ⌈para_ganar / efectividad⌉.' },
           faltan: { ...int, description: 'max(0, necesarias − personas).' },
-          proyeccion: { type: 'number', description: 'Margen proyectado con la meta y la efectividad, en puntos.' },
           ln: { ...int, description: 'Lista nominal de la sección en el proceso.' },
         },
       },
@@ -380,20 +383,21 @@ export const openapi = {
             description: 'null si el proceso no tiene resultados en el municipio.',
           },
           umbral_margen: { type: 'number' },
-          efectividad: { type: 'number', description: '% de las personas que se cuentan como votos nuevos.' },
+          efectividad: { type: 'number', description: '% de las personas comprometidas que se espera que voten por el partido.' },
           municipio: {
             oneOf: [
               {
                 type: 'object',
-                description: 'Totales del municipio: resultado registrado y proyección con la meta.',
+                description: 'Totales de las secciones con resultados.',
                 properties: {
                   votos: int,
                   propio: int,
-                  rival: nullable('string'),
-                  votos_rival: int,
-                  margen: { type: 'number' },
+                  para_ganar: int,
                   personas: int,
-                  proyeccion: { type: 'number' },
+                  votos_estructura: { type: 'number' },
+                  cobertura: { type: 'number', description: 'votos_estructura / para_ganar × 100.' },
+                  secciones_cubiertas: int,
+                  faltan: int,
                   ln: int,
                 },
               },
@@ -508,7 +512,7 @@ export const openapi = {
           type: 'object',
           properties: {
             partido_propio: nullable('string', { description: 'Siglas de un partido del catálogo, o null para quitarlo.', examples: ['MORENA'] }),
-            efectividad: { type: 'integer', minimum: 1, maximum: 100, description: '% de las personas comprometidas que se cuentan como votos nuevos. Por omisión 50.' },
+            efectividad: { type: 'integer', minimum: 1, maximum: 100, description: '% de las personas comprometidas que se espera que voten por el partido. Por omisión 50.' },
           },
           minProperties: 1,
         }),
@@ -533,20 +537,19 @@ export const openapi = {
         tags: ['Prioridad'],
         summary: 'Prioridad por sección',
         description:
-          'Proyección: los votos son de la elección registrada y las personas de la estructura son la meta para la siguiente. ' +
-          'Clasifica cada sección por su margen y por si la meta alcanza para quedar ganada por `margen` puntos. ' +
-          'Ordenada por prioridad; donde la meta no alcanza, primero las que necesitan menos personas.',
+          'La estructura (meta de personas para la siguiente elección × efectividad) contra los votos para ganar (votos del ganador de la elección registrada + 1). ' +
+          'Clasifica cada sección por la banda de su margen y por si la estructura cubre esos votos. Ordenada por prioridad y, dentro de cada categoría, por la cobertura más baja.',
         parameters: [
           MID,
           query('proceso', 'Por omisión, el más reciente.', { type: 'integer' }),
           query('eleccion', 'Elección del proceso; por omisión Ayuntamiento o la primera con resultados en el municipio.', { type: 'integer' }),
-          query('margen', 'Puntos que separan competida de ganada/perdida; también es la ventaja objetivo de la meta.', {
+          query('margen', 'Puntos que separan competida de ganada/perdida.', {
             type: 'number',
             exclusiveMinimum: 0,
             maximum: 99,
             default: 10,
           }),
-          query('efectividad', '% de las personas comprometidas que se cuentan como votos nuevos; por omisión, el de Configuración (50).', {
+          query('efectividad', '% de las personas comprometidas que se espera que voten por el partido; por omisión, el de Configuración (50).', {
             type: 'number',
             exclusiveMinimum: 0,
             maximum: 100,

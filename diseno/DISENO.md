@@ -199,29 +199,30 @@ Se implementan como variables CSS en `:root`. Los valores de color dependen del 
 - En celular la tabla se apila como tarjetas y los filtros siguen §8.
 
 ### Prioridad (sin maqueta; compuesta con §2–§4)
-- Pantalla `/prioridad` en **Geografía y elección**. La ven todos los roles. Es una **proyección para la siguiente elección**: parte del resultado de la elección registrada y le suma la **meta** de la estructura. Las personas de cada asignación son las que el operador se compromete a movilizar en la *siguiente* elección, no las que movilizó en la registrada; por eso la pantalla nunca dice "movilizadas" sino "meta" o "comprometidas".
-- Encabezado "Prioridad por sección" con la descripción "Proyección para la siguiente elección: el resultado de *partido propio* en *Ayuntamiento 2024* más la meta de personas de la estructura." A la derecha, el selector de la elección registrada (solo las que tienen votos; por omisión Ayuntamiento).
+- Pantalla `/prioridad` en **Geografía y elección**. La ven todos los roles. Responde: **¿la estructura, por sí sola, alcanza para ganar cada sección?** La estructura es el voto con el que sí se cuenta; no se supone que los votos de la elección registrada se repitan. Las personas de cada asignación son la **meta** que el operador se compromete a movilizar en la *siguiente* elección; la pantalla nunca dice "movilizadas", sino "meta" o "comprometidas".
+- Encabezado "Prioridad por sección" con la descripción "Si la estructura de *partido propio*, por sí sola, alcanza los votos con los que se ganó cada sección en *Ayuntamiento 2024*." A la derecha, el selector de la elección registrada (solo las que tienen votos; por omisión Ayuntamiento).
 - Depende del **partido propio** y de la **efectividad** (Configuración, §6). Si no hay partido propio, la pantalla muestra un aviso en lugar de la matriz: el ADMIN ve el enlace "Elegir partido propio" y los demás, "Pide al administrador que elija el partido propio".
-- Cálculos por sección (solo las casillas con resultados de la elección):
-  - **Margen** = (votos del partido propio − votos del rival principal) / votos totales, en puntos. El rival principal es el partido más votado distinto del propio. Se muestra con signo: `+4.2`, `−3.1`.
-  - **Diferencia** en votos: "Ganó por 32" o "Perdió por 15" (en pasado: es la elección registrada).
-  - **Meta**: personas comprometidas (suma de las asignaciones vigentes).
-  - **Necesarias**: personas que harían falta para que, contando como votos nuevos el *efectividad* % de ellas (por omisión 50 %), la sección quede **ganada por al menos 10 puntos**. Votos nuevos *x* tales que (dif + x) / (votos + x) ≥ 10 %; personas = x / efectividad.
-  - **Faltan** = necesarias − meta (0 si la meta alcanza). **Proyección** = margen con la meta y la efectividad.
-- Clasificación en 5 categorías, en este orden de prioridad:
+- Cálculos por sección (solo las casillas con resultados de la elección registrada):
+  - **Votos para ganar** = votos del ganador de la sección + 1 (aunque el ganador sea el partido propio: la estructura tendría que superar por sí sola esa votación).
+  - **Votos de la estructura** = meta × efectividad (por omisión 50 %: de cada 100 comprometidos, cuántos se espera que voten por el partido).
+  - **Cobertura** = votos de la estructura / votos para ganar. La estructura **cubre** la sección desde 100 %.
+  - **Faltan** = personas por comprometer para llegar al 100 % (⌈votos para ganar / efectividad⌉ − meta).
+  - **Margen** = (votos propios − rival principal) / votos totales, en puntos, con signo (`+4.2`, `−3.1`). Solo define la fila de la matriz.
+- Clasificación en 6 categorías, en este orden de prioridad (primero donde la estructura no cubre):
 
   | Categoría | Cuándo | Etiqueta | Lectura |
   |---|---|---|---|
-  | Prioridad | Competida (±10 puntos) y la meta no alcanza | alerta "Prioridad" | Se decide aquí y falta gente comprometida. |
-  | Cubierta | Competida y la meta alcanza | ok "Cubierta" | Cuidar que la meta se cumpla. |
-  | Apuesta | Perdida por más de 10 y la meta alcanza para voltearla | gris "Apuesta" | Se está invirtiendo para recuperarla; vigilar que la meta sea realista. |
-  | Abrir | Perdida por más de 10 y la meta no alcanza | gris "Abrir" | Terreno por abrir; costoso. |
-  | Bastión | Ganada por más de 10 | ok "Bastión" | Ya cumple el objetivo sin meta. |
+  | Prioridad | Competida (±10 puntos) y no cubre | alerta "Prioridad" | Se decide aquí y la estructura no alcanza. |
+  | Reforzar | Ganada por más de 10 y no cubre | gris "Reforzar" | Se ganó con voto que no se controla. |
+  | Abrir | Perdida por más de 10 y no cubre | gris "Abrir" | Terreno por abrir. |
+  | Cubierta | Competida y cubre | ok "Cubierta" | Cuidar que la meta se cumpla. |
+  | Apuesta | Perdida y cubre | gris "Apuesta" | Si la meta se cumple, se voltea. |
+  | Bastión | Ganada y cubre | ok "Bastión" | La estructura sola la gana. |
 
-- Arriba van 4 KPI: **Secciones prioritarias** (de cuántas con resultados), **Personas por comprometer** (suma de "faltan" en las prioritarias), **Margen *año*** (del municipio, con las siglas y porcentajes del propio y del rival) y **Margen proyectado** (con la meta total y la efectividad).
-- **Matriz** (componente de §4): filas Ganada, Competida y Perdida; columnas "La meta no alcanza" y "La meta alcanza". Ganada es una sola celda que ocupa las 2 columnas (Bastión). Cada celda muestra la etiqueta, el número de secciones y "Faltan *n* personas" (donde no alcanza) o "Meta *n* personas". Al tocarla filtra la tabla; al tocarla otra vez se quita el filtro. Debajo, una `nota` explica que los votos son de la elección registrada y la meta de la siguiente, la efectividad, el objetivo de 10 puntos y cuántas secciones no tienen resultados.
-- Tabla (paginada desde la API, ordenada por prioridad; donde la meta no alcanza, primero las que necesitan menos personas, y en el resto el margen más cerrado): Sección (enlace al detalle), Categoría, Margen *año*, Diferencia, Rival, Meta ("Sin operador" de alerta si no hay operadores), Necesarias, Faltan (etiqueta ok "Alcanza", la cifra, o "No requiere" en bastiones) y Proyección. En iPad se ocultan Rival, Necesarias y Proyección; en celular, tarjetas apiladas.
-- La proyección es optimista: supone que el resto de los votantes repite su voto. No se usan los colores de los partidos (§4); las categorías se distinguen por etiqueta y texto, no solo por color.
+- Arriba van 4 KPI: **Secciones prioritarias** (de cuántas con resultados), **Cobertura de la estructura** (votos de la estructura / votos para ganar de todo el municipio, con barra), **Secciones cubiertas** y **Personas por comprometer** (en las prioritarias, y en todo el municipio en la línea de contexto).
+- **Matriz** (componente de §4): filas Ganada, Competida y Perdida (resultado registrado); columnas "La estructura no cubre" y "La estructura cubre". Cada celda muestra la etiqueta, el número de secciones y "Faltan *n* personas" (no cubre) o "Meta *n* personas" (cubre). Al tocarla filtra la tabla; otra vez, quita el filtro. Debajo, una `nota` explica los votos para ganar, la efectividad, el umbral de 10 puntos y cuántas secciones no tienen resultados.
+- Tabla (paginada desde la API, ordenada por categoría y, dentro de cada una, por la cobertura más baja): Sección (enlace al detalle), Categoría, Margen *año*, Ganó (siglas y votos del ganador), Para ganar, Meta ("Sin operador" de alerta si no hay operadores), Votos estructura, Cobertura (barra; de alerta bajo 100 %) y Faltan (o la etiqueta ok "Cubre"). En iPad se ocultan Ganó y Votos estructura; en celular, tarjetas apiladas.
+- La efectividad es un supuesto: el valor real se obtiene marcando el día de la elección qué comprometidos votaron. No se usan los colores de los partidos (§4); las categorías se distinguen por etiqueta y texto, no solo por color.
 
 ### Pantallas pendientes de diseñar
 Se construyen con los mismos componentes y layout:
@@ -242,7 +243,7 @@ En **Administración** hay una opción **Configuración**, visible solo para ADM
 **Prioridad (partido propio y efectividad)**
 - Segunda tarjeta de Configuración, "Prioridad", con dos campos (dos columnas desde iPad):
   - **Partido propio**: selector con los partidos del catálogo (siglas y nombre) más "Sin elegir".
-  - **Efectividad de la meta (%)**: entero de 1 a 100, por omisión 50, con la nota "De cada 100 personas comprometidas, cuántas se cuentan como votos nuevos (las demás quizá ya votaban por el partido)". Si no es válido, se avisa y no se puede guardar.
+  - **Efectividad de la meta (%)**: entero de 1 a 100, por omisión 50, con la nota "De cada 100 personas comprometidas, cuántas se espera que voten por el partido (algunas no votan o votan por otro)". Si no es válido, se avisa y no se puede guardar. Referencia: efectividad ≈ (probabilidad de que vote) × (probabilidad de que vote por el partido); 40 % pesimista, 50 % central, ≈ 63 % optimista; nunca menos que participación × votación del partido (un ciudadano al azar).
 - Se guardan en `configuracion` con las claves `partido_propio` (siglas) y `efectividad`. `PATCH /api/configuracion` con `{ "partido_propio": "MORENA" | null, "efectividad": 50 }` (los campos presentes); solo ADMIN. `GET /api/configuracion` solo los devuelve con sesión (sin sesión, solo el tema).
 - No cambian el color del sitio.
 

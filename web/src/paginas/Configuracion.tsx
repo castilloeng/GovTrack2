@@ -132,7 +132,7 @@ const EFECTIVIDAD = 50
 
 /**
  * Ajustes de Prioridad (claves `partido_propio` y `efectividad` de `configuracion`): el partido con el que se
- * calcula el margen y el % de las personas comprometidas que se cuentan como votos nuevos.
+ * calcula el resultado y el % de las personas comprometidas que se espera que voten por el partido.
  */
 function AjustesPrioridad() {
   const config = useApi<Record<string, string>>('/configuracion')
@@ -153,7 +153,7 @@ function AjustesPrioridad() {
       <div>
         <h2>Prioridad</h2>
         <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          Con qué partido se calcula el margen de cada sección y cuánto de la meta de la estructura se cuenta como votos nuevos. No cambia el color del sitio.
+          Con qué partido se calcula el resultado de cada sección y cuántos votos se esperan de la meta de la estructura. No cambia el color del sitio.
         </p>
       </div>
       {config.error || partidos.error ? (
@@ -211,7 +211,7 @@ function AjustesPrioridad() {
                 }}
               />
               <span className="nota" style={{ fontWeight: 400 }}>
-                De cada 100 personas comprometidas, cuántas se cuentan como votos nuevos (las demás quizá ya votaban por el partido). Por omisión, {EFECTIVIDAD}.
+                De cada 100 personas comprometidas, cuántas se espera que voten por el partido (algunas no votan o votan por otro). Por omisión, {EFECTIVIDAD}.
               </span>
             </label>
           </div>
