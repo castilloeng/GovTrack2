@@ -1,27 +1,37 @@
 import type { Context } from 'hono'
+import { usuarioDeSesion } from './auth'
 
 export type Bindings = {
   DB: D1Database
-  // Solo para desarrollo local (en .dev.vars) mientras no exista el login con Google.
+  // Login con Google (secretos del Worker; en local, en .dev.vars).
+  GOOGLE_CLIENT_ID?: string
+  GOOGLE_CLIENT_SECRET?: string
+  // Firma las cookies de sesión. Cadena aleatoria larga.
+  SESSION_SECRET?: string
+  // Solo para desarrollo local (en .dev.vars): entra con este usuario sin pasar por Google.
   USUARIO_PRUEBA_EMAIL?: string
 }
 
-export type Env = { Bindings: Bindings }
+export type Env = { Bindings: Bindings; Variables: { usuario?: Usuario | null } }
 export type Ctx = Context<Env>
 
 export type Rol = 'ADMIN' | 'CAPTURISTA' | 'CONSULTA'
 export type Usuario = { id: number; email: string; nombre: string; rol: Rol }
 
 /**
- * Usuario de la petición. Mientras no exista el login con Google se identifica por el email que
- * agrega Cloudflare Access o, en local, por USUARIO_PRUEBA_EMAIL. Solo entran usuarios activos.
+ * Usuario de la petición: el de la cookie de sesión (login con Google) o, en local, USUARIO_PRUEBA_EMAIL.
+ * Solo entran usuarios activos. Se consulta una vez por petición.
  */
 export async function usuarioActual(c: Ctx): Promise<Usuario | null> {
-  const email = c.req.header('Cf-Access-Authenticated-User-Email') ?? c.env.USUARIO_PRUEBA_EMAIL
-  if (!email) return null
-  return c.env.DB.prepare('SELECT id, email, nombre, rol FROM usuario WHERE email = ? AND activo = 1')
-    .bind(email)
-    .first<Usuario>()
+  const guardado = c.get('usuario')
+  if (guardado !== undefined) return guardado
+  const id = await usuarioDeSesion(c)
+  const campos = 'SELECT id, email, nombre, rol FROM usuario WHERE activo = 1 AND '
+  let u: Usuario | null = null
+  if (id) u = await c.env.DB.prepare(campos + 'id = ?').bind(id).first<Usuario>()
+  else if (c.env.USUARIO_PRUEBA_EMAIL) u = await c.env.DB.prepare(campos + 'email = ?').bind(c.env.USUARIO_PRUEBA_EMAIL).first<Usuario>()
+  c.set('usuario', u)
+  return u
 }
 
 /** Error con código HTTP; el manejador de errores de la app lo convierte en `{ error }`. */
@@ -35,9 +45,8 @@ export class ErrorApi extends Error {
 }
 
 /**
- * Verifica el acceso a un municipio. Las lecturas siguen abiertas mientras no exista el login
- * (como /api/municipios), pero si hay usuario y no es ADMIN, solo ve sus municipios.
- * Las escrituras exigen usuario ADMIN o CAPTURISTA.
+ * Verifica el acceso a un municipio: si el usuario no es ADMIN, solo ve sus municipios.
+ * Las escrituras exigen ADMIN o CAPTURISTA. (La sesión ya la exige el middleware de index.ts.)
  */
 export async function accesoMunicipio(c: Ctx, municipioId: number, escritura = false): Promise<Usuario | null> {
   const u = await usuarioActual(c)

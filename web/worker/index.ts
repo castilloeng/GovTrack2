@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import auth from './auth'
 import { ErrorApi, usuarioActual, type Env } from './comun'
 import geografia from './geografia'
 import { openapi, sinDocumentar } from './openapi'
@@ -21,6 +22,17 @@ app.onError((e, c) => {
 })
 
 app.get('/health', (c) => c.json({ ok: true }))
+
+// Login con Google: /auth/login, /auth/callback y /auth/logout.
+app.route('/', auth)
+
+// El resto de la API exige sesión, salvo la configuración (el tema se pinta también en el login).
+const PUBLICAS = ['/api/health', '/api/configuracion']
+app.use(async (c, next) => {
+  if (PUBLICAS.includes(c.req.path) || c.req.path.startsWith('/api/auth/')) return next()
+  if (!(await usuarioActual(c))) throw new ErrorApi(401, 'No autenticado')
+  return next()
+})
 
 // Documentación OpenAPI (worker/openapi.ts). `x-sin-documentar` avisa de rutas que faltan en la especificación.
 app.get('/openapi.json', (c) => c.json({ ...openapi, 'x-sin-documentar': sinDocumentar(app.routes) }))

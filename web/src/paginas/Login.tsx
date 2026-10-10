@@ -1,8 +1,22 @@
-import { Link } from '../router'
+import { urlLogin } from '../api'
 import { IcoCandado, IcoGoogle } from '../iconos'
 
-// Acceso con Google (diseno/pantallas/Login.dc.html). Sin conexión todavía: el botón entra al Panel.
+// Acceso con Google (diseno/pantallas/Login.dc.html). El Worker redirige aquí con ?error= si el login falla
+// (worker/auth.ts); el mensaje sustituye al aviso fijo, en el mismo lugar (DISENO.md §5).
+const ERRORES: Record<string, string> = {
+  'sin-acceso': 'Esa cuenta de Google no está dada de alta en GovTrack. Pide acceso a tu administrador.',
+  inactivo: 'Tu usuario está desactivado. Pide a tu administrador que lo reactive.',
+  'no-verificado': 'Google no ha verificado el correo de esa cuenta. Verifícalo e inténtalo de nuevo.',
+  cancelado: 'Se canceló el inicio de sesión con Google.',
+  estado: 'El inicio de sesión expiró o no es válido. Inténtalo de nuevo.',
+  google: 'No se pudo validar la respuesta de Google. Inténtalo de nuevo.',
+  config: 'El inicio de sesión con Google no está configurado en el servidor.',
+}
+
 export default function Login() {
+  const params = new URLSearchParams(location.search)
+  const codigo = params.get('error')
+  const error = codigo ? (ERRORES[codigo] ?? 'No se pudo iniciar sesión. Inténtalo de nuevo.') : null
   return (
     <div className="login">
       <div className="login-marca">
@@ -33,13 +47,13 @@ export default function Login() {
             <h2>Iniciar sesión</h2>
             <p>Entra con la cuenta de Google que te dio de alta el administrador.</p>
           </div>
-          <Link to="/" className="btn-google">
+          <a href={urlLogin(params.get('volver'))} className="btn-google">
             <IcoGoogle />
             Continuar con Google
-          </Link>
-          <div className="aviso">
+          </a>
+          <div className="aviso" role={error ? 'alert' : undefined}>
             <IcoCandado />
-            <span>Solo pueden entrar usuarios activos y con el correo verificado por Google. GovTrack no guarda contraseñas.</span>
+            <span>{error ?? 'Solo pueden entrar usuarios activos y con el correo verificado por Google. GovTrack no guarda contraseñas.'}</span>
           </div>
           <div className="nota" style={{ fontSize: 13 }}>
             ¿No tienes acceso? Pídelo a tu administrador.

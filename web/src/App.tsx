@@ -14,7 +14,6 @@ import Pendiente from './paginas/Pendiente'
 
 function Pantalla({ ruta }: { ruta: string }) {
   let m: RegExpMatchArray | null
-  if (ruta === '/login') return <Login />
   if (ruta === '/') return <Panel />
   if (ruta === '/operadores') return <Operadores />
   if ((m = ruta.match(/^\/operadores\/(\d+)$/))) return <Operadores id={Number(m[1])} />
@@ -31,6 +30,8 @@ function Pantalla({ ruta }: { ruta: string }) {
 
 export default function App() {
   const ruta = useRuta()
+  // El login va fuera del contexto: el contexto exige sesión y redirige aquí si no la hay.
+  if (ruta === '/login') return <Login />
   return (
     <ContextoProvider>
       <Pantalla ruta={ruta} />

@@ -16,8 +16,8 @@ type Contexto = {
   proceso: string
   setMunicipioId: (id: number) => void
   setProcesoId: (id: number) => void
-  /** Usuario de /api/me; null si no hay sesión. */
-  usuario: Usuario | null
+  /** Usuario de /api/me. El contexto solo se muestra con sesión. */
+  usuario: Usuario
   puedeCapturar: boolean
 }
 
@@ -43,6 +43,8 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
 
   useEffect(() => {
+    // Sin sesión, api() redirige al login.
+    api<Usuario>('/me').then(setUsuario, () => setUsuario(null))
     api<Municipio[]>('/municipios').then((ms) => {
       setMunicipios(ms)
       setMunicipioId((id) => (ms.some((m) => m.id === id) ? id : (ms[0]?.id ?? null)))
@@ -51,7 +53,6 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
       setProcesos(ps)
       setProcesoId((id) => (ps.some((p) => p.id === id) ? id : (ps[0]?.id ?? null)))
     }, console.error)
-    api<Usuario>('/me').then(setUsuario, () => setUsuario(null))
   }, [])
 
   useEffect(() => {
@@ -61,6 +62,9 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
       // Sin localStorage la selección dura solo la sesión.
     }
   }, [municipioId, procesoId])
+
+  // Mientras se valida la sesión no se pinta nada (evita mostrar pantallas a quien no ha entrado).
+  if (!usuario) return null
 
   const m = municipios.find((x) => x.id === municipioId)
   const p = procesos.find((x) => x.id === procesoId)
@@ -77,7 +81,7 @@ export function ContextoProvider({ children }: { children: ReactNode }) {
         setMunicipioId,
         setProcesoId,
         usuario,
-        puedeCapturar: usuario?.rol === 'ADMIN' || usuario?.rol === 'CAPTURISTA',
+        puedeCapturar: usuario.rol === 'ADMIN' || usuario.rol === 'CAPTURISTA',
       }}
     >
       {children}

@@ -43,7 +43,7 @@ Se va a pasar de la app de escritorio a una **aplicación web multiusuario** sob
 ```
 web/
 ├── src/                 # Frontend React (TypeScript)
-├── worker/             # Worker: API con Hono bajo /api/* (index.ts, comun.ts, geografia.ts, openapi.ts)
+├── worker/             # Worker: API con Hono bajo /api/* (index.ts, auth.ts, comun.ts, geografia.ts, openapi.ts)
 ├── scripts/            # Utilidades locales (p. ej. seed_desde_desktop.py)
 ├── migrations/          # Migraciones D1 (0001_esquema_inicial.sql = esquema completo)
 ├── index.html           # Entrada de Vite
@@ -102,7 +102,8 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 - **Base de datos**: el binding de D1 (`DB` → `govtrack`) se toma de `wrangler.jsonc`, no se configura en el panel.
 - **Migraciones**: **no** se aplican en el deploy. Tras agregar una migración nueva, correr `npm run db:migrate:remote` desde `web/`.
   - La BD remota tiene aplicada la `0001` y contiene los municipios de prueba TAPACHULA y CACAHOATAN. También tiene aplicada la `0002_configuracion.sql` (tema `verde`).
-- **Seguridad**: sin login, la URL pública expone la API. No cargar datos reales hasta tener autenticación, o proteger la URL con Cloudflare Access.
+- **Secretos del Worker** (`npx wrangler secret put <NOMBRE>`): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `SESSION_SECRET` (cadena aleatoria larga que firma las cookies de sesión; cambiarla cierra todas las sesiones). Si falta alguno, el login redirige a `/login?error=config`.
+- **Seguridad**: toda la API exige sesión salvo `/api/health`, `GET /api/configuracion` y `/api/auth/*`.
 
 ### Modelo de datos (resumen)
 
@@ -128,9 +129,19 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 - **Fuera de alcance**: coaliciones, candidaturas comunes, votos nulos y candidatos no registrados.
 - **Datos actuales**: son de prueba, así que no hace falta una migración cuidadosa de `ContactoDet` y `Contacto`. Los catálogos (secciones, colonias, casillas) sí pueden cargarse desde el SQLite actual o desde Excel.
 
+### Login con Google (`web/worker/auth.ts`)
+
+- Flujo OpenID Connect "authorization code": `GET /api/auth/login?volver=` → Google → `GET /api/auth/callback` → cookie de sesión `gt_sesion` (JWT HS256 firmado con `SESSION_SECRET`, HttpOnly, 7 días) → redirige a `volver`. `POST /api/auth/logout` la borra.
+- El callback valida `state` y `nonce` (cookie `gt_oauth`), `aud`, `iss`, `exp` y `email_verified`. Busca al usuario por `google_sub` o, en el primer login, por email (y guarda `google_sub`). Si falla redirige a `/login?error=` (`sin-acceso`, `inactivo`, `no-verificado`, `cancelado`, `estado`, `google`, `config`) y la pantalla muestra el mensaje.
+- `usuarioActual()` (`web/worker/comun.ts`) lee la cookie y vuelve a consultar `usuario` (solo activos) en cada petición. En local, si no hay sesión, usa `USUARIO_PRUEBA_EMAIL` de `web/.dev.vars` (comentarlo para probar el login real). Ya **no** se acepta el header `Cf-Access-Authenticated-User-Email`.
+- Frontend: cualquier 401 de `api()` lleva a `/login?volver=…`; el avatar cierra sesión.
+- Credenciales OAuth (Google Cloud Console, tipo "Aplicación web"):
+  - **Client ID** (público): `724223285890-cvqfva03vnt7ukgel0ak3taja7tj6d15.apps.googleusercontent.com`
+  - **Client secret**: **no se versiona**. En local está en `web/.dev.vars` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`); en producción, como secretos del Worker.
+  - **URIs de redireccionamiento autorizados**: `https://govtrack.rosain.workers.dev/api/auth/callback` y `http://localhost:5173/api/auth/callback` (el puerto local debe coincidir).
+
 ### Pendiente
 
-- Login con Google. Hoy existen `/api/health`, `/api/municipios`, `GET /api/me`, `GET /api/configuracion`, `PUT /api/configuracion/tema` (solo ADMIN) y las rutas de secciones y colonias (abajo). Mientras no haya login, `usuarioActual()` (`web/worker/index.ts`) identifica al usuario por el header de Cloudflare Access `Cf-Access-Authenticated-User-Email` o, en local, por `USUARIO_PRUEBA_EMAIL` en `web/.dev.vars` (no se versiona). Ese usuario debe existir y estar activo en la tabla `usuario`.
 - Carga de catálogos desde Excel (desde el SQLite de escritorio ya existe `web/scripts/seed_desde_desktop.py`).
 - Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`) y los selectores de municipio y proceso ya usan la API; Panel, Operadores e Importar siguen con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
 - Diseñar e implementar Asignaciones y Usuarios (hoy muestran "pendiente de diseño").
@@ -158,5 +169,5 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 | `PATCH /api/colonias/:id` | Cambia `nombre`, `tipo_asentamiento` y `cp`. |
 | `PUT` / `DELETE /api/secciones/:id/colonias/:cid` | Agrega o quita la colonia de la sección (no se quita si tiene asignaciones, aunque estén dadas de baja). |
 
-- Acceso (`accesoMunicipio()` en `worker/comun.ts`): las escrituras exigen ADMIN o CAPTURISTA; un usuario que no es ADMIN solo accede a sus municipios (`usuario_municipio`). Mientras no haya login, las lecturas sin usuario siguen abiertas, como `/api/municipios`.
+- Acceso (`accesoMunicipio()` en `worker/comun.ts`): las escrituras exigen ADMIN o CAPTURISTA; un usuario que no es ADMIN solo accede a sus municipios (`usuario_municipio`).
 - Los errores de la API responden `{ error }` con su código HTTP (`ErrorApi`).

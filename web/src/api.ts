@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { navegar } from './router'
 
 // Cliente mínimo de la API (/api/*, mismo origen que el frontend).
 
@@ -18,11 +19,25 @@ export async function api<T>(ruta: string, opts: { metodo?: string; datos?: unkn
     body: opts.datos === undefined ? undefined : JSON.stringify(opts.datos),
   })
   const cuerpo = (await r.json().catch(() => null)) as (T & { error?: string }) | null
-  if (!r.ok) {
-    const mensaje = r.status === 401 ? 'Inicia sesión con un usuario que pueda capturar.' : (cuerpo?.error ?? `Error ${r.status}`)
-    throw new ErrorApi(r.status, mensaje)
-  }
+  if (r.status === 401) irALogin()
+  if (!r.ok) throw new ErrorApi(r.status, r.status === 401 ? 'Tu sesión terminó. Vuelve a iniciar sesión.' : (cuerpo?.error ?? `Error ${r.status}`))
   return cuerpo as T
+}
+
+/** Sin sesión (o expirada): al login, recordando a dónde volver. */
+export function irALogin() {
+  if (location.pathname === '/login') return
+  navegar('/login?volver=' + encodeURIComponent(location.pathname + location.search), { reemplazar: true })
+}
+
+/** URL que inicia el login con Google (navegación completa, no fetch). */
+export function urlLogin(volver: string | null) {
+  return '/api/auth/login' + (volver ? '?volver=' + encodeURIComponent(volver) : '')
+}
+
+export async function cerrarSesion() {
+  await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined)
+  navegar('/login', { reemplazar: true })
 }
 
 /** GET con estado de carga. `ruta = null` no consulta (p. ej. mientras falta el municipio). */

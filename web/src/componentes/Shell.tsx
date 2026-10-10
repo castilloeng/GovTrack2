@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useRuta } from '../router'
-import { ROL_NOMBRE, usuarioActual as usuarioEjemplo, type Rol } from '../datos'
+import { cerrarSesion } from '../api'
+import { ROL_NOMBRE, type Rol } from '../datos'
 import { iniciales, nombrePropio } from '../formato'
 import {
   IcoAjustes,
@@ -61,9 +62,7 @@ export default function Shell({ children, busqueda = false }: { children: ReactN
   const [navAbierta, setNavAbierta] = useState(false)
   const [hojaContexto, setHojaContexto] = useState(false)
   const [buscando, setBuscando] = useState(false)
-  const { municipio, proceso, municipios, procesos, municipioId, procesoId, setMunicipioId, setProcesoId, usuario } = useContexto()
-  // Sin login todavía: si /api/me no responde se muestra el usuario de ejemplo.
-  const usuarioActual = usuario ?? usuarioEjemplo
+  const { municipio, proceso, municipios, procesos, municipioId, procesoId, setMunicipioId, setProcesoId, usuario: usuarioActual } = useContexto()
   const puede = (roles: Rol[] | undefined) => !roles || roles.includes(usuarioActual.rol)
 
   // El cajón se cierra al elegir una opción.
@@ -156,7 +155,17 @@ export default function Shell({ children, busqueda = false }: { children: ReactN
               <div className="usuario-nombre">{usuarioActual.nombre}</div>
               <div className="usuario-rol">{ROL_NOMBRE[usuarioActual.rol]}</div>
             </div>
-            <Link to="/login" className="avatar" aria-label={`${usuarioActual.nombre}, ${ROL_NOMBRE[usuarioActual.rol]}. Cerrar sesión`} title="Cerrar sesión" style={{ textDecoration: 'none' }}>
+            <Link
+              to="/login"
+              className="avatar"
+              aria-label={`${usuarioActual.nombre}, ${ROL_NOMBRE[usuarioActual.rol]}. Cerrar sesión`}
+              title="Cerrar sesión"
+              style={{ textDecoration: 'none' }}
+              onClick={(e) => {
+                e.preventDefault()
+                void cerrarSesion()
+              }}
+            >
               {iniciales(usuarioActual.nombre)}
             </Link>
           </div>

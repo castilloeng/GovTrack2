@@ -25,7 +25,9 @@ const ESCRITURA = {
   '401': err('No autenticado.'),
   '403': err('Rol CONSULTA o sin acceso al municipio.'),
 }
-const LECTURA_MUNICIPIO = { '403': err('El usuario no tiene acceso al municipio.') }
+const LECTURA_MUNICIPIO = { '401': err('No autenticado.'), '403': err('El usuario no tiene acceso al municipio.') }
+const SIN_SESION = { '401': err('No autenticado.') }
+const redireccion = (description: string) => ({ description, headers: { Location: { schema: { type: 'string' } } } })
 
 const Ok = { type: 'object', properties: { ok: { type: 'boolean', const: true } }, required: ['ok'] }
 const nullable = (type: string, extra: Obj = {}) => ({ type: [type, 'null'], ...extra })
@@ -38,22 +40,23 @@ export const openapi = {
     version: '0.1.0',
     description:
       'API del Worker de GovTrack (Cloudflare Workers + D1). Todas las respuestas son JSON; los errores responden `{ "error": "mensaje" }` con su código HTTP.\n\n' +
-      '**Autenticación (provisional):** mientras no exista el login con Google, el usuario se identifica por el header de Cloudflare Access ' +
-      '`Cf-Access-Authenticated-User-Email` o, en local, por `USUARIO_PRUEBA_EMAIL`. Debe existir y estar activo en la tabla `usuario`. ' +
-      'Las escrituras exigen ADMIN o CAPTURISTA (el tema, solo ADMIN); un usuario que no es ADMIN solo accede a sus municipios.',
+      '**Autenticación:** login con Google (`/auth/login`). La sesión es la cookie HttpOnly `gt_sesion` (7 días); en local, `USUARIO_PRUEBA_EMAIL` ' +
+      'entra sin Google. El usuario debe estar dado de alta y activo en la tabla `usuario`. Todas las rutas exigen sesión salvo `/health`, ' +
+      '`/configuracion` (GET) y `/auth/*`. Las escrituras exigen ADMIN o CAPTURISTA (el tema, solo ADMIN); un usuario que no es ADMIN solo accede a sus municipios.',
   },
   servers: [{ url: '/api' }],
-  // Las lecturas aceptan petición anónima mientras no haya login; las escrituras declaran `cfAccess` obligatorio.
-  security: [{}, { cfAccess: [] }],
+  // Todas las rutas exigen la cookie de sesión salvo las que declaran `security: []`.
+  security: [{ sesion: [] }],
   tags: [
     { name: 'General', description: 'Estado del servicio, usuario y catálogos.' },
+    { name: 'Autenticación', description: 'Login con Google (OpenID Connect) y cierre de sesión.' },
     { name: 'Configuración', description: 'Ajustes globales del sitio.' },
     { name: 'Secciones', description: 'Secciones electorales, casillas y resultados.' },
     { name: 'Colonias', description: 'Colonias y su relación con las secciones.' },
   ],
   components: {
     securitySchemes: {
-      cfAccess: { type: 'apiKey', in: 'header', name: 'Cf-Access-Authenticated-User-Email', description: 'Email del usuario (lo agrega Cloudflare Access).' },
+      sesion: { type: 'apiKey', in: 'cookie', name: 'gt_sesion', description: 'Cookie de sesión que crea `/auth/callback` tras el login con Google.' },
     },
     schemas: {
       Error: { type: 'object', properties: { error: { type: 'string' } }, required: ['error'] },
@@ -175,39 +178,64 @@ export const openapi = {
   },
   paths: {
     '/health': {
-      get: { tags: ['General'], summary: 'Estado del servicio', responses: { '200': json({ type: 'object', properties: { ok: { type: 'boolean' } } }) } },
+      get: { tags: ['General'], summary: 'Estado del servicio', security: [], responses: { '200': json({ type: 'object', properties: { ok: { type: 'boolean' } } }) } },
+    },
+    '/auth/login': {
+      get: {
+        tags: ['Autenticación'],
+        summary: 'Iniciar sesión con Google',
+        description: 'Redirige a Google. Se abre como navegación del navegador, no con `fetch`.',
+        security: [],
+        parameters: [query('volver', 'Ruta local a la que volver tras el login.', { type: 'string', default: '/' })],
+        responses: { '302': redireccion('A Google, o a `/login?error=config` si faltan los secretos.') },
+      },
+    },
+    '/auth/callback': {
+      get: {
+        tags: ['Autenticación'],
+        summary: 'Regreso de Google',
+        description:
+          'Valida `state` y el ID token, busca al usuario por `google_sub` o (primer login) por email, y crea la cookie `gt_sesion`. ' +
+          'Si falla redirige a `/login?error=` con `cancelado`, `estado`, `google`, `no-verificado`, `sin-acceso`, `inactivo` o `config`.',
+        security: [],
+        parameters: [query('code', 'Código de autorización.'), query('state', 'Valor anti-CSRF.'), query('error', 'Error devuelto por Google.')],
+        responses: { '302': redireccion('A la ruta `volver` con sesión, o a `/login?error=…`.') },
+      },
+    },
+    '/auth/logout': {
+      post: { tags: ['Autenticación'], summary: 'Cerrar sesión', description: 'Borra la cookie de sesión.', security: [], responses: { '204': { description: 'Sesión cerrada.' } } },
     },
     '/openapi.json': {
       get: {
         tags: ['General'],
         summary: 'Esta especificación',
         description: 'Incluye `x-sin-documentar` con las rutas del Worker que aún no están en la especificación.',
-        responses: { '200': json({ type: 'object' }) },
+        responses: { '200': json({ type: 'object' }), ...SIN_SESION },
       },
     },
     '/me': {
       get: {
         tags: ['General'],
         summary: 'Usuario actual',
-        security: [{ cfAccess: [] }],
         responses: { '200': json(ref('Usuario')), '401': err('No autenticado.') },
       },
     },
     '/municipios': {
-      get: { tags: ['General'], summary: 'Municipios', responses: { '200': json({ type: 'array', items: ref('Municipio') }) } },
+      get: { tags: ['General'], summary: 'Municipios', responses: { '200': json({ type: 'array', items: ref('Municipio') }), ...SIN_SESION } },
     },
     '/procesos': {
       get: {
         tags: ['General'],
         summary: 'Procesos electorales con sus elecciones',
         description: 'El más reciente primero.',
-        responses: { '200': json({ type: 'array', items: ref('Proceso') }) },
+        responses: { '200': json({ type: 'array', items: ref('Proceso') }), ...SIN_SESION },
       },
     },
     '/configuracion': {
       get: {
         tags: ['Configuración'],
         summary: 'Ajustes globales',
+        security: [],
         responses: { '200': json({ type: 'object', additionalProperties: { type: 'string' }, examples: [{ tema: 'verde' }] }) },
       },
     },
@@ -216,7 +244,6 @@ export const openapi = {
         tags: ['Configuración'],
         summary: 'Cambiar el tema del sitio',
         description: 'Solo ADMIN.',
-        security: [{ cfAccess: [] }],
         requestBody: cuerpo({ type: 'object', properties: { tema: ref('Tema') }, required: ['tema'] }),
         responses: { '200': json({ type: 'object', properties: { tema: ref('Tema') } }), '400': err('Tema inválido.'), '401': err('No autenticado.'), '403': err('No es ADMIN.') },
       },
@@ -240,7 +267,6 @@ export const openapi = {
       post: {
         tags: ['Secciones'],
         summary: 'Alta de sección',
-        security: [{ cfAccess: [] }],
         parameters: [MID],
         requestBody: cuerpo({
           type: 'object',
@@ -264,7 +290,6 @@ export const openapi = {
         tags: ['Secciones'],
         summary: 'Editar tipo y sector',
         description: 'Solo cambia los campos presentes en el cuerpo.',
-        security: [{ cfAccess: [] }],
         parameters: [SID],
         requestBody: cuerpo({ type: 'object', properties: { tipo: ref('TipoSeccion'), sector: nullable('string') } }),
         responses: { '200': json(Ok), ...ESCRITURA, '404': err('La sección no existe.') },
@@ -293,7 +318,6 @@ export const openapi = {
         tags: ['Colonias'],
         summary: 'Agregar colonia a la sección',
         description: 'Idempotente. La colonia debe ser del mismo municipio.',
-        security: [{ cfAccess: [] }],
         parameters: [SID, path('cid', 'Id de la colonia.')],
         responses: { '200': json(Ok), ...ESCRITURA, '404': err('La sección o la colonia no existen.') },
       },
@@ -301,7 +325,6 @@ export const openapi = {
         tags: ['Colonias'],
         summary: 'Quitar colonia de la sección',
         description: 'No se permite si la colonia tiene asignaciones en la sección, aunque estén dadas de baja.',
-        security: [{ cfAccess: [] }],
         parameters: [SID, path('cid', 'Id de la colonia.')],
         responses: { '200': json(Ok), ...ESCRITURA, '404': err('La sección no existe.'), '409': err('La colonia tiene asignaciones en la sección.') },
       },
@@ -324,7 +347,6 @@ export const openapi = {
       post: {
         tags: ['Colonias'],
         summary: 'Alta de colonia',
-        security: [{ cfAccess: [] }],
         parameters: [MID],
         requestBody: cuerpo({
           allOf: [
@@ -340,7 +362,6 @@ export const openapi = {
         tags: ['Colonias'],
         summary: 'Editar colonia',
         description: 'Solo cambia los campos presentes en el cuerpo.',
-        security: [{ cfAccess: [] }],
         parameters: [path('id', 'Id de la colonia.')],
         requestBody: cuerpo(ref('ColoniaEntrada')),
         responses: { '200': json(Ok), ...ESCRITURA, '404': err('La colonia no existe.'), '409': err('Ya existe una colonia con ese nombre y CP.') },
