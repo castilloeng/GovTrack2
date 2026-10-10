@@ -194,8 +194,8 @@ export type PanelDatos = {
 
 export type Partido = { id: number; siglas: string; nombre: string | null }
 
-/** Categorías de Prioridad, en orden: banda del margen + con/sin estructura. */
-export type CategoriaPrioridad = 'competida-sin' | 'competida-con' | 'ganada-sin' | 'perdida-con' | 'perdida-sin' | 'ganada-con'
+/** Categorías de Prioridad, en orden. Ver worker/prioridad.ts. */
+export type CategoriaPrioridad = 'prioridad' | 'cubierta' | 'apuesta' | 'abrir' | 'bastion'
 
 export type PrioridadFila = {
   id: number
@@ -205,13 +205,17 @@ export type PrioridadFila = {
   propio: number
   rival: string | null
   votos_rival: number
-  /** Puntos: (propio − rival) / votos × 100. */
+  /** Puntos en la elección registrada: (propio − rival) / votos × 100. */
   margen: number
   operadores: number
+  /** Meta: personas comprometidas para la siguiente elección. */
   personas: number
+  /** Personas que harían falta para quedar ganada por `umbral_margen` puntos. */
+  necesarias: number
+  faltan: number
+  /** Margen proyectado con la meta y la efectividad, en puntos. */
+  proyeccion: number
   ln: number
-  /** personas / ln, en %. */
-  cobertura: number
 }
 
 export type PrioridadDatos = Pagina<PrioridadFila> & {
@@ -219,9 +223,19 @@ export type PrioridadDatos = Pagina<PrioridadFila> & {
   proceso_id: number | null
   eleccion: { id: number; cargo: string } | null
   umbral_margen: number
-  umbral_cobertura: number
-  municipio: { votos: number; propio: number; rival: string | null; votos_rival: number; ln: number } | null
-  matriz: Record<CategoriaPrioridad, { secciones: number; ln: number }>
+  /** % de las personas comprometidas que se cuentan como votos nuevos. */
+  efectividad: number
+  municipio: {
+    votos: number
+    propio: number
+    rival: string | null
+    votos_rival: number
+    margen: number
+    personas: number
+    proyeccion: number
+    ln: number
+  } | null
+  matriz: Record<CategoriaPrioridad, { secciones: number; ln: number; personas: number; faltan: number }>
   sin_resultados: number
 }
 

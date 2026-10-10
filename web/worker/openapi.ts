@@ -62,7 +62,7 @@ export const openapi = {
     { name: 'Secciones', description: 'Secciones electorales, casillas y resultados.' },
     { name: 'Colonias', description: 'Colonias y su relación con las secciones.' },
     { name: 'Panel', description: 'Indicadores del municipio, resultados y actividad reciente.' },
-    { name: 'Prioridad', description: 'Cruce del resultado del partido propio con la estructura de cada sección.' },
+    { name: 'Prioridad', description: 'Proyección: resultado registrado del partido propio + meta de la estructura para la siguiente elección.' },
     { name: 'Usuarios', description: 'Usuarios del sitio, su rol y sus municipios. Solo ADMIN. No se borran: se desactivan.' },
     { name: 'Estructura', description: 'Personas (padrón), operadores, enlaces y asignaciones. El rol se deduce de las relaciones.' },
   ],
@@ -345,9 +345,11 @@ export const openapi = {
       },
       CategoriaPrioridad: {
         type: 'string',
-        enum: ['competida-sin', 'competida-con', 'ganada-sin', 'perdida-con', 'perdida-sin', 'ganada-con'],
+        enum: ['prioridad', 'cubierta', 'apuesta', 'abrir', 'bastion'],
         description:
-          'Banda del margen (`ganada` > +umbral, `perdida` < −umbral, `competida` en medio) y cobertura (`con` ≥ umbral de cobertura). En orden de prioridad.',
+          'En orden de prioridad. `bastion`: ganada por más de `margen` puntos. Competidas: `prioridad` (la meta no alcanza) o `cubierta` (alcanza). ' +
+          'Perdidas por más de `margen`: `apuesta` (alcanza) o `abrir` (no alcanza). La meta alcanza si, con el `efectividad` % de las personas como votos nuevos, ' +
+          'la sección quedaría ganada por al menos `margen` puntos.',
       },
       PrioridadFila: {
         type: 'object',
@@ -355,15 +357,17 @@ export const openapi = {
           id: int,
           numero: { ...int, description: 'Número de sección.' },
           categoria: ref('CategoriaPrioridad'),
-          votos: { ...int, description: 'Votos totales de la elección en la sección.' },
+          votos: { ...int, description: 'Votos totales de la elección registrada en la sección.' },
           propio: { ...int, description: 'Votos del partido propio.' },
           rival: nullable('string', { description: 'Siglas del partido más votado distinto del propio.' }),
           votos_rival: int,
           margen: { type: 'number', description: '(propio − rival) / votos × 100, en puntos, con un decimal.' },
           operadores: int,
-          personas: { ...int, description: 'Personas movilizadas (asignaciones vigentes).' },
+          personas: { ...int, description: 'Meta: personas comprometidas para la siguiente elección (asignaciones vigentes).' },
+          necesarias: { ...int, description: 'Personas que harían falta para quedar ganada por `margen` puntos con la efectividad.' },
+          faltan: { ...int, description: 'max(0, necesarias − personas).' },
+          proyeccion: { type: 'number', description: 'Margen proyectado con la meta y la efectividad, en puntos.' },
           ln: { ...int, description: 'Lista nominal de la sección en el proceso.' },
-          cobertura: { type: 'number', description: 'personas / ln × 100.' },
         },
       },
       Prioridad: {
@@ -371,23 +375,35 @@ export const openapi = {
         properties: {
           partido_propio: nullable('string', { description: 'null si el ADMIN no lo ha elegido; entonces `filas` viene vacío.' }),
           proceso_id: nullable('integer'),
-          eleccion: { oneOf: [{ type: 'object', properties: { id: int, cargo: { type: 'string' } } }, { type: 'null' }], description: 'null si el proceso no tiene resultados en el municipio.' },
+          eleccion: {
+            oneOf: [{ type: 'object', properties: { id: int, cargo: { type: 'string' } } }, { type: 'null' }],
+            description: 'null si el proceso no tiene resultados en el municipio.',
+          },
           umbral_margen: { type: 'number' },
-          umbral_cobertura: { type: 'number' },
+          efectividad: { type: 'number', description: '% de las personas que se cuentan como votos nuevos.' },
           municipio: {
             oneOf: [
               {
                 type: 'object',
-                description: 'Totales del municipio en la elección.',
-                properties: { votos: int, propio: int, rival: nullable('string'), votos_rival: int, ln: int },
+                description: 'Totales del municipio: resultado registrado y proyección con la meta.',
+                properties: {
+                  votos: int,
+                  propio: int,
+                  rival: nullable('string'),
+                  votos_rival: int,
+                  margen: { type: 'number' },
+                  personas: int,
+                  proyeccion: { type: 'number' },
+                  ln: int,
+                },
               },
               { type: 'null' },
             ],
           },
           matriz: {
             type: 'object',
-            description: 'Secciones y lista nominal por categoría (sin filtrar por `categoria`).',
-            additionalProperties: { type: 'object', properties: { secciones: int, ln: int } },
+            description: 'Por categoría (sin filtrar por `categoria`): secciones, lista nominal, meta y personas que faltan.',
+            additionalProperties: { type: 'object', properties: { secciones: int, ln: int, personas: int, faltan: int } },
           },
           sin_resultados: { ...int, description: 'Secciones sin votos en la elección; no entran en la matriz.' },
           total: { ...int, description: 'Filas que cumplen el filtro.' },
@@ -484,6 +500,24 @@ export const openapi = {
         security: [],
         responses: { '200': json({ type: 'object', additionalProperties: { type: 'string' }, examples: [{ tema: 'verde' }] }) },
       },
+      patch: {
+        tags: ['Configuración'],
+        summary: 'Cambiar los ajustes de Prioridad',
+        description: 'Solo ADMIN. Cambia solo los campos presentes. Responde todas las claves.',
+        requestBody: cuerpo({
+          type: 'object',
+          properties: {
+            partido_propio: nullable('string', { description: 'Siglas de un partido del catálogo, o null para quitarlo.', examples: ['MORENA'] }),
+            efectividad: { type: 'integer', minimum: 1, maximum: 100, description: '% de las personas comprometidas que se cuentan como votos nuevos. Por omisión 50.' },
+          },
+          minProperties: 1,
+        }),
+        responses: {
+          '200': json({ type: 'object', additionalProperties: { type: 'string' } }),
+          '400': err('Partido fuera del catálogo, efectividad inválida o cuerpo vacío.'),
+          ...SOLO_ADMIN,
+        },
+      },
     },
     '/configuracion/tema': {
       put: {
@@ -494,32 +528,29 @@ export const openapi = {
         responses: { '200': json({ type: 'object', properties: { tema: ref('Tema') } }), '400': err('Tema inválido.'), '401': err('No autenticado.'), '403': err('No es ADMIN.') },
       },
     },
-    '/configuracion/partido_propio': {
-      put: {
-        tags: ['Configuración'],
-        summary: 'Elegir el partido propio',
-        description: 'Solo ADMIN. Siglas de un partido del catálogo, o `null` para quitarlo. Se usa en Prioridad.',
-        requestBody: cuerpo({ type: 'object', properties: { partido_propio: nullable('string', { examples: ['MORENA'] }) }, required: ['partido_propio'] }),
-        responses: {
-          '200': json({ type: 'object', properties: { partido_propio: nullable('string') } }),
-          '400': err('No es un partido del catálogo.'),
-          ...SOLO_ADMIN,
-        },
-      },
-    },
     '/municipios/{mid}/prioridad': {
       get: {
         tags: ['Prioridad'],
         summary: 'Prioridad por sección',
         description:
-          'Clasifica cada sección con resultados por el margen del partido propio sobre el rival principal y por la cobertura de la estructura. ' +
-          'Ordenada por prioridad y, dentro de cada categoría, por el margen más cerrado.',
+          'Proyección: los votos son de la elección registrada y las personas de la estructura son la meta para la siguiente. ' +
+          'Clasifica cada sección por su margen y por si la meta alcanza para quedar ganada por `margen` puntos. ' +
+          'Ordenada por prioridad; donde la meta no alcanza, primero las que necesitan menos personas.',
         parameters: [
           MID,
           query('proceso', 'Por omisión, el más reciente.', { type: 'integer' }),
           query('eleccion', 'Elección del proceso; por omisión Ayuntamiento o la primera con resultados en el municipio.', { type: 'integer' }),
-          query('margen', 'Puntos de margen que separan competida de ganada/perdida.', { type: 'number', exclusiveMinimum: 0, maximum: 100, default: 10 }),
-          query('cobertura', 'Porcentaje de la lista nominal desde el que hay estructura.', { type: 'number', exclusiveMinimum: 0, maximum: 100, default: 3 }),
+          query('margen', 'Puntos que separan competida de ganada/perdida; también es la ventaja objetivo de la meta.', {
+            type: 'number',
+            exclusiveMinimum: 0,
+            maximum: 99,
+            default: 10,
+          }),
+          query('efectividad', '% de las personas comprometidas que se cuentan como votos nuevos; por omisión, el de Configuración (50).', {
+            type: 'number',
+            exclusiveMinimum: 0,
+            maximum: 100,
+          }),
           query('categoria', 'Solo las secciones de esta categoría.', ref('CategoriaPrioridad')),
           ...PAGINA,
         ],

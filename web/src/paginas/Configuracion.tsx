@@ -121,28 +121,39 @@ export default function Configuracion() {
           </div>
         </section>
 
-        <PartidoPropio />
+        <AjustesPrioridad />
       </main>
     </Shell>
   )
 }
 
-/** Partido propio: base del margen en Prioridad (clave `partido_propio` de `configuracion`). */
-function PartidoPropio() {
+/** Efectividad por omisión (igual que EFECTIVIDAD en worker/prioridad.ts). */
+const EFECTIVIDAD = 50
+
+/**
+ * Ajustes de Prioridad (claves `partido_propio` y `efectividad` de `configuracion`): el partido con el que se
+ * calcula el margen y el % de las personas comprometidas que se cuentan como votos nuevos.
+ */
+function AjustesPrioridad() {
   const config = useApi<Record<string, string>>('/configuracion')
   const partidos = useApi<Partido[]>('/partidos')
-  const guardado = config.datos ? (config.datos.partido_propio ?? '') : null
-  const [elegido, setElegido] = useState<string | null>(null)
+  const guardado = config.datos ? { partido: config.datos.partido_propio ?? '', efectividad: config.datos.efectividad ?? String(EFECTIVIDAD) } : null
+  const [partido, setPartido] = useState<string | null>(null)
+  const [efectividad, setEfectividad] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
   const [guardando, setGuardando] = useState(false)
-  const valor = elegido ?? guardado ?? ''
+  const valorPartido = partido ?? guardado?.partido ?? ''
+  const valorEfectividad = efectividad ?? guardado?.efectividad ?? String(EFECTIVIDAD)
+  const efectividadNum = Number(valorEfectividad)
+  const efectividadOk = Number.isInteger(efectividadNum) && efectividadNum >= 1 && efectividadNum <= 100
+  const cambio = !!guardado && (valorPartido !== guardado.partido || valorEfectividad !== guardado.efectividad)
 
   return (
     <section className="card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 }}>
       <div>
-        <h2>Partido propio</h2>
+        <h2>Prioridad</h2>
         <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-          Se usa en Prioridad para calcular el margen de cada sección. No cambia el color del sitio.
+          Con qué partido se calcula el margen de cada sección y cuánto de la meta de la estructura se cuenta como votos nuevos. No cambia el color del sitio.
         </p>
       </div>
       {config.error || partidos.error ? (
@@ -159,42 +170,67 @@ function PartidoPropio() {
             Reintentar
           </button>
         </div>
-      ) : guardado === null || !partidos.datos ? (
+      ) : !guardado || !partidos.datos ? (
         <div className="muted" style={{ fontSize: 13 }}>
           Cargando…
         </div>
       ) : (
         <>
-          <label className="campo" style={{ maxWidth: 360 }}>
-            Partido
-            <select
-              value={valor}
-              onChange={(e) => {
-                setElegido(e.target.value)
-                setAviso(null)
-              }}
-            >
-              <option value="">Sin elegir</option>
-              {partidos.datos.map((p) => (
-                <option key={p.id} value={p.siglas}>
-                  {p.siglas}
-                  {p.nombre ? ` · ${p.nombre}` : ''}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="form-grid" style={{ padding: 0 }}>
+            <label className="campo">
+              Partido propio
+              <select
+                value={valorPartido}
+                onChange={(e) => {
+                  setPartido(e.target.value)
+                  setAviso(null)
+                }}
+              >
+                <option value="">Sin elegir</option>
+                {partidos.datos.map((p) => (
+                  <option key={p.id} value={p.siglas}>
+                    {p.siglas}
+                    {p.nombre ? ` · ${p.nombre}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="campo">
+              Efectividad de la meta (%)
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={100}
+                step={1}
+                value={valorEfectividad}
+                aria-invalid={!efectividadOk}
+                onChange={(e) => {
+                  setEfectividad(e.target.value)
+                  setAviso(null)
+                }}
+              />
+              <span className="nota" style={{ fontWeight: 400 }}>
+                De cada 100 personas comprometidas, cuántas se cuentan como votos nuevos (las demás quizá ya votaban por el partido). Por omisión, {EFECTIVIDAD}.
+              </span>
+            </label>
+          </div>
           <div className="acciones" style={{ alignItems: 'center' }}>
             <button
               className="btn pri"
               type="button"
-              disabled={valor === guardado || guardando}
+              disabled={!cambio || !efectividadOk || guardando}
               onClick={async () => {
                 setGuardando(true)
                 try {
-                  await api('/configuracion/partido_propio', { metodo: 'PUT', datos: { partido_propio: valor || null } })
+                  await api('/configuracion', {
+                    metodo: 'PATCH',
+                    datos: { partido_propio: valorPartido || null, efectividad: efectividadNum },
+                  })
                   config.recargar()
-                  setElegido(null)
-                  setAviso({ ok: true, texto: valor ? `Partido propio: ${valor}` : 'Partido propio quitado' })
+                  setPartido(null)
+                  setEfectividad(null)
+                  setAviso({ ok: true, texto: 'Ajustes guardados' })
                 } catch (e) {
                   setAviso({ ok: false, texto: `No se pudo guardar: ${(e as Error).message}` })
                 } finally {
@@ -204,6 +240,11 @@ function PartidoPropio() {
             >
               {guardando ? 'Guardando…' : 'Guardar'}
             </button>
+            {!efectividadOk && (
+              <p role="alert" className="tag warn" style={{ whiteSpace: 'normal' }}>
+                La efectividad debe ser un entero de 1 a 100
+              </p>
+            )}
             {aviso && (
               <p role="status" className={'tag' + (aviso.ok ? '' : ' warn')} style={{ whiteSpace: 'normal' }}>
                 {aviso.texto}

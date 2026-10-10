@@ -20,7 +20,7 @@ El repositorio contiene:
   | Tabla | Qué es realmente |
   |---|---|
   | `Contacto` | Padrón de personas (operadores **y** enlaces). |
-  | `ContactoDet` | **Asignación de un operador** a una sección + colonia. `NUM_PERSONAS` son las personas que moviliza en esa colonia. `OPERADOR_ENLACE1/2` son sus **enlaces** (no operadores). Si enlace1 = enlace2, significa que tiene un solo enlace. |
+  | `ContactoDet` | **Asignación de un operador** a una sección + colonia. `NUM_PERSONAS` son las personas que se compromete a movilizar en esa colonia **en la siguiente elección** (meta, no lo que movilizó). `OPERADOR_ENLACE1/2` son sus **enlaces** (no operadores). Si enlace1 = enlace2, significa que tiene un solo enlace. |
   | `Seccion2` | En realidad son **casillas**: una fila por casilla (B, C1, E1…), con su lista nominal (`LN`) y los votos por partido en JSON (`PARTIDOS`). |
   | `Colonias` | Relación colonia ↔ sección. Una colonia puede repetirse en varias secciones. |
 
@@ -112,9 +112,9 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 - **Estructura territorial**:
   - `persona`: padrón único. El rol no se guarda; se deduce de las relaciones, y una persona puede ser operador y enlace a la vez.
   - `operador_enlace`: cada **operador** tiene **1 o 2 enlaces**. Los enlaces son **del operador**, los mismos en todas sus asignaciones.
-  - `operador_asignacion`: el operador es responsable de una (sección, colonia), con `num_personas`. La FK compuesta a `seccion_colonia` garantiza que la colonia pertenezca a la sección.
+  - `operador_asignacion`: el operador es responsable de una (sección, colonia), con `num_personas`: la **meta** de personas que movilizará en la **siguiente** elección. Los resultados cargados son de la elección pasada, así que cruzarlos es una proyección, no una evaluación de la estructura. La FK compuesta a `seccion_colonia` garantiza que la colonia pertenezca a la sección.
 - **Acceso**: `usuario` con roles `ADMIN`, `CAPTURISTA` y `CONSULTA`. `usuario_municipio` limita qué municipios ve cada usuario (ADMIN ve todos). `importacion` es la bitácora de cargas desde Excel.
-- **Configuración**: `configuracion (clave, valor)` guarda ajustes globales del sitio: el tema de color (`tema`, migración `0002`) y el partido propio (`partido_propio`, siglas; sin migración, lo crea el ADMIN desde Configuración).
+- **Configuración**: `configuracion (clave, valor)` guarda ajustes globales del sitio: el tema de color (`tema`, migración `0002`), el partido propio (`partido_propio`, siglas) y la efectividad de la meta (`efectividad`, 1–100, por omisión 50). Las dos últimas no tienen migración: las crea el ADMIN desde Configuración.
 - **Vistas**: `v_asignacion` (equivale a la antigua `ContactoDet`) y `v_votos_seccion`.
 
 ### Decisiones tomadas
@@ -168,13 +168,13 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 
 ### API de prioridad (`web/worker/prioridad.ts`)
 
-- `GET /api/municipios/:mid/prioridad?proceso=&eleccion=&margen=&cobertura=&categoria=&pagina=&limite=`: matriz de prioridad (pantalla `/prioridad`, DISENO.md §5).
-  - Por sección: margen = (votos del partido propio − rival principal) / votos totales, en puntos; cobertura = personas / lista nominal.
-  - Clasifica en `ganada|competida|perdida` (±`margen`, por omisión 10) × `con|sin` estructura (`cobertura`, por omisión 3 %). Devuelve la `matriz` (secciones y LN por categoría), los totales del municipio y las filas paginadas, ordenadas por prioridad.
+- `GET /api/municipios/:mid/prioridad?proceso=&eleccion=&margen=&efectividad=&categoria=&pagina=&limite=`: pantalla `/prioridad` (DISENO.md §5). Es una **proyección**: votos de la elección registrada + meta de la estructura (`num_personas`) para la siguiente.
+  - Por sección: margen = (votos propios − rival principal) / votos, en puntos; `necesarias` = personas para quedar ganada por `margen` puntos (por omisión 10) contando el `efectividad` % (por omisión, el de Configuración o 50) como votos nuevos; `faltan` = necesarias − meta.
+  - Categorías: `prioridad` (competida, la meta no alcanza), `cubierta`, `apuesta` (perdida, la meta alcanza), `abrir` y `bastion` (ganada por más de `margen`). Devuelve la `matriz` (secciones, LN, meta y faltan por categoría), los totales del municipio (margen y proyección) y las filas paginadas, ordenadas por prioridad.
   - Si no hay `partido_propio` responde `partido_propio: null` y sin filas; la pantalla muestra el aviso.
-- `GET /api/partidos` (catálogo) y `PUT /api/configuracion/partido_propio` (`{ partido_propio: "MORENA" | null }`, solo ADMIN).
-- `GET /api/configuracion` sin sesión solo devuelve `tema` (el partido propio exige sesión). En local, `USUARIO_PRUEBA_EMAIL` cuenta como sesión.
-- La BD remota todavía no tiene `partido_propio`: elegirlo en Configuración después del deploy.
+- `GET /api/partidos` (catálogo) y `PATCH /api/configuracion` (`{ partido_propio?: "MORENA" | null, efectividad?: 1–100 }`, solo ADMIN).
+- `GET /api/configuracion` sin sesión solo devuelve `tema` (el resto exige sesión). En local, `USUARIO_PRUEBA_EMAIL` cuenta como sesión.
+- La BD remota no tiene `partido_propio` hasta que el ADMIN lo elige en Configuración; `efectividad` usa 50 mientras no se guarde.
 
 ### API de usuarios (`web/worker/usuarios.ts`)
 

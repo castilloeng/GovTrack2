@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import auth from './auth'
-import { ErrorApi, usuarioActual, type Env } from './comun'
+import { cuerpo, ErrorApi, usuarioActual, type Env } from './comun'
 import estructura from './estructura'
 import geografia from './geografia'
 import { openapi, sinDocumentar } from './openapi'
@@ -93,27 +93,45 @@ app.put('/configuracion/tema', async (c) => {
   return c.json({ tema: body.tema })
 })
 
-// Partido propio (Prioridad): siglas de un partido del catálogo, o null para quitarlo.
-app.put('/configuracion/partido_propio', async (c) => {
+// Ajustes de Prioridad (solo ADMIN): `partido_propio` (siglas del catálogo, o null para quitarlo) y
+// `efectividad` (1–100: % de las personas comprometidas que se cuentan como votos nuevos).
+app.patch('/configuracion', async (c) => {
   const u = (await usuarioActual(c))!
-  if (u.rol !== 'ADMIN') throw new ErrorApi(403, 'Solo el administrador puede elegir el partido propio')
-  const body = await c.req.json<{ partido_propio?: unknown }>().catch(() => ({}) as { partido_propio?: unknown })
-  const valor = body.partido_propio
-  if (valor === null) {
-    await c.env.DB.prepare(`DELETE FROM configuracion WHERE clave = 'partido_propio'`).run()
-    return c.json({ partido_propio: null })
+  if (u.rol !== 'ADMIN') throw new ErrorApi(403, 'Solo el administrador puede cambiar la configuración')
+  const body = await cuerpo<{ partido_propio: unknown; efectividad: unknown }>(c)
+  const cambios: [string, string | null][] = []
+  if ('partido_propio' in body) {
+    const v = body.partido_propio
+    if (v === null) cambios.push(['partido_propio', null])
+    else {
+      if (typeof v !== 'string') throw new ErrorApi(400, 'partido_propio debe ser las siglas de un partido o null')
+      const partido = await c.env.DB.prepare('SELECT siglas FROM partido WHERE siglas = ?').bind(v.trim()).first<{ siglas: string }>()
+      if (!partido) throw new ErrorApi(400, `El partido ${v} no está en el catálogo`)
+      cambios.push(['partido_propio', partido.siglas])
+    }
   }
-  if (typeof valor !== 'string') throw new ErrorApi(400, 'partido_propio debe ser las siglas de un partido o null')
-  const partido = await c.env.DB.prepare('SELECT siglas FROM partido WHERE siglas = ?').bind(valor.trim()).first<{ siglas: string }>()
-  if (!partido) throw new ErrorApi(400, `El partido ${valor} no está en el catálogo`)
-  await c.env.DB.prepare(
-    `INSERT INTO configuracion (clave, valor, updated_by) VALUES ('partido_propio', ?1, ?2)
-     ON CONFLICT (clave) DO UPDATE SET valor = ?1, updated_by = ?2,
-       updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`,
+  if ('efectividad' in body) {
+    const v = body.efectividad
+    if (typeof v !== 'number' || !Number.isInteger(v) || v < 1 || v > 100) throw new ErrorApi(400, 'efectividad debe ser un entero de 1 a 100')
+    cambios.push(['efectividad', String(v)])
+  }
+  if (cambios.length === 0) throw new ErrorApi(400, 'Nada que cambiar; usa partido_propio o efectividad')
+  const db = c.env.DB
+  await db.batch(
+    cambios.map(([clave, valor]) =>
+      valor === null
+        ? db.prepare('DELETE FROM configuracion WHERE clave = ?').bind(clave)
+        : db
+            .prepare(
+              `INSERT INTO configuracion (clave, valor, updated_by) VALUES (?1, ?2, ?3)
+               ON CONFLICT (clave) DO UPDATE SET valor = ?2, updated_by = ?3,
+                 updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`,
+            )
+            .bind(clave, valor, u.id),
+    ),
   )
-    .bind(partido.siglas, u.id)
-    .run()
-  return c.json({ partido_propio: partido.siglas })
+  const { results } = await db.prepare('SELECT clave, valor FROM configuracion').all<{ clave: string; valor: string }>()
+  return c.json(Object.fromEntries(results.map((r) => [r.clave, r.valor])))
 })
 
 // Procesos, secciones y colonias.

@@ -1,14 +1,21 @@
 import { Hono } from 'hono'
 import { accesoMunicipio, ErrorApi, idParam, type Env } from './comun'
 
-// Prioridad por sección (DISENO.md §5 "Prioridad"): cruza el resultado del partido propio
-// (configuracion.partido_propio) con la cobertura de la estructura en cada sección.
+// Prioridad por sección (DISENO.md §5 "Prioridad"). Los votos son de la elección registrada (pasada) y
+// las personas de la estructura son la META para la siguiente elección: el cruce es una proyección.
+//
+// La meta "alcanza" si, contando como votos nuevos el `efectividad` % de las personas comprometidas,
+// la sección quedaría ganada por al menos `margen` puntos (fuera de la zona competida).
+// Las secciones ganadas por más de `margen` puntos ya lo cumplen (bastión).
 
 const prioridad = new Hono<Env>()
 
 /** Categorías en orden de prioridad. */
-export const CATEGORIAS = ['competida-sin', 'competida-con', 'ganada-sin', 'perdida-con', 'perdida-sin', 'ganada-con'] as const
+export const CATEGORIAS = ['prioridad', 'cubierta', 'apuesta', 'abrir', 'bastion'] as const
 type Categoria = (typeof CATEGORIAS)[number]
+
+/** Efectividad por omisión: % de las personas comprometidas que se cuentan como votos nuevos. */
+export const EFECTIVIDAD = 50
 
 type Fila = {
   id: number
@@ -21,10 +28,14 @@ type Fila = {
   /** (propio − rival) / votos, en puntos. */
   margen: number
   operadores: number
+  /** Meta: personas comprometidas para la siguiente elección. */
   personas: number
+  /** Personas que harían falta comprometer para quedar ganada por `margen` puntos. */
+  necesarias: number
+  faltan: number
+  /** Margen proyectado con la meta y la efectividad, en puntos. */
+  proyeccion: number
   ln: number
-  /** personas / ln, en %. */
-  cobertura: number
 }
 
 /** Número de un parámetro de consulta con valor por omisión y límites. */
@@ -35,18 +46,25 @@ function numero(v: string | undefined, nombre: string, defecto: number, max: num
   return x
 }
 
+/** Margen en puntos tras sumar `extra` votos nuevos al partido propio. */
+const margenCon = (propio: number, rival: number, votos: number, extra: number) =>
+  votos + extra > 0 ? ((propio + extra - rival) / (votos + extra)) * 100 : 0
+
 prioridad.get('/municipios/:mid/prioridad', async (c) => {
   const mid = idParam(c.req.param('mid'), 'municipio')
   await accesoMunicipio(c, mid)
   const db = c.env.DB
-  const umbralMargen = numero(c.req.query('margen'), 'margen', 10, 100)
-  const umbralCobertura = numero(c.req.query('cobertura'), 'cobertura', 3, 100)
+  const umbralMargen = numero(c.req.query('margen'), 'margen', 10, 99)
   const categoria = c.req.query('categoria')
   if (categoria && !(CATEGORIAS as readonly string[]).includes(categoria)) throw new ErrorApi(400, 'categoria inválida')
   const pagina = Math.max(1, Math.floor(Number(c.req.query('pagina')) || 1))
   const limite = Math.min(100, Math.max(1, Math.floor(Number(c.req.query('limite')) || 50)))
 
-  const propio = (await db.prepare(`SELECT valor FROM configuracion WHERE clave = 'partido_propio'`).first<{ valor: string }>())?.valor ?? null
+  const { results: config } = await db
+    .prepare(`SELECT clave, valor FROM configuracion WHERE clave IN ('partido_propio', 'efectividad')`)
+    .all<{ clave: string; valor: string }>()
+  const propio = config.find((r) => r.clave === 'partido_propio')?.valor ?? null
+  const efectividad = numero(c.req.query('efectividad'), 'efectividad', Number(config.find((r) => r.clave === 'efectividad')?.valor) || EFECTIVIDAD, 100)
 
   // Proceso pedido o el más reciente; elección pedida o Ayuntamiento (o la primera con votos en el municipio).
   const procesoQ = c.req.query('proceso')
@@ -71,23 +89,11 @@ prioridad.get('/municipios/:mid/prioridad', async (c) => {
     if (!eleccion) throw new ErrorApi(404, 'La elección no tiene resultados en este municipio y proceso')
   }
 
-  const vacio = { secciones: 0, ln: 0 }
-  const base = {
-    partido_propio: propio,
-    proceso_id: proceso,
-    eleccion,
-    umbral_margen: umbralMargen,
-    umbral_cobertura: umbralCobertura,
-  }
+  const vacia = () => ({ secciones: 0, ln: 0, personas: 0, faltan: 0 })
+  const matriz = Object.fromEntries(CATEGORIAS.map((k) => [k, vacia()])) as Record<Categoria, ReturnType<typeof vacia>>
+  const base = { partido_propio: propio, proceso_id: proceso, eleccion, umbral_margen: umbralMargen, efectividad }
   if (!propio || !eleccion) {
-    return c.json({
-      ...base,
-      municipio: null,
-      matriz: Object.fromEntries(CATEGORIAS.map((k) => [k, vacio])),
-      sin_resultados: 0,
-      total: 0,
-      filas: [],
-    })
+    return c.json({ ...base, municipio: null, matriz, sin_resultados: 0, total: 0, filas: [] })
   }
 
   const [secciones, votos] = await db.batch([
@@ -142,22 +148,34 @@ prioridad.get('/municipios/:mid/prioridad', async (c) => {
     return { total, suyos, rival, votosRival }
   }
 
-  const matriz = Object.fromEntries(CATEGORIAS.map((k) => [k, { secciones: 0, ln: 0 }])) as Record<Categoria, { secciones: number; ln: number }>
+  const u = umbralMargen / 100
+  const e = efectividad / 100
   let sinResultados = 0
+  let personasMunicipio = 0
   const filas: Fila[] = []
   for (const s of secciones.results as { id: number; numero: number; ln: number; operadores: number; personas: number }[]) {
+    personasMunicipio += s.personas
     const partidos = porSeccion.get(s.id)
     const cuenta = partidos && contar(partidos)
     if (!cuenta || cuenta.total === 0) {
       sinResultados++
       continue
     }
-    const margen = ((cuenta.suyos - cuenta.votosRival) / cuenta.total) * 100
-    const cobertura = s.ln > 0 ? (s.personas / s.ln) * 100 : 0
+    const dif = cuenta.suyos - cuenta.votosRival
+    const margen = (dif / cuenta.total) * 100
+    // Votos nuevos x para que (dif + x) / (votos + x) ≥ u  →  x ≥ (u·votos − dif) / (1 − u).
+    // (Se resta un épsilon para que el error de punto flotante no sume uno de más: 72.00000000000001 → 72.)
+    const votosNecesarios = Math.max(0, Math.ceil((u * cuenta.total - dif) / (1 - u) - 1e-9))
+    const necesarias = Math.ceil(votosNecesarios / e - 1e-9)
+    const faltan = Math.max(0, necesarias - s.personas)
     const banda = margen > umbralMargen ? 'ganada' : margen < -umbralMargen ? 'perdida' : 'competida'
-    const cat = `${banda}-${cobertura >= umbralCobertura ? 'con' : 'sin'}` as Categoria
-    matriz[cat].secciones++
-    matriz[cat].ln += s.ln
+    const cat: Categoria =
+      banda === 'ganada' ? 'bastion' : banda === 'competida' ? (faltan > 0 ? 'prioridad' : 'cubierta') : faltan > 0 ? 'abrir' : 'apuesta'
+    const m = matriz[cat]
+    m.secciones++
+    m.ln += s.ln
+    m.personas += s.personas
+    m.faltan += faltan
     filas.push({
       id: s.id,
       numero: s.numero,
@@ -169,14 +187,19 @@ prioridad.get('/municipios/:mid/prioridad', async (c) => {
       margen: Math.round(margen * 10) / 10,
       operadores: s.operadores,
       personas: s.personas,
+      necesarias,
+      faltan,
+      proyeccion: Math.round(margenCon(cuenta.suyos, cuenta.votosRival, cuenta.total, s.personas * e) * 10) / 10,
       ln: s.ln,
-      cobertura: Math.round(cobertura * 100) / 100,
     })
   }
 
-  // Por prioridad y, dentro de cada categoría, el margen más cerrado primero.
+  // Por prioridad. Donde la meta no alcanza, primero las que necesitan menos personas; en el resto, el margen más cerrado.
   filas.sort(
-    (a, b) => CATEGORIAS.indexOf(a.categoria) - CATEGORIAS.indexOf(b.categoria) || Math.abs(a.margen) - Math.abs(b.margen) || a.numero - b.numero,
+    (a, b) =>
+      CATEGORIAS.indexOf(a.categoria) - CATEGORIAS.indexOf(b.categoria) ||
+      (a.faltan > 0 ? a.faltan - b.faltan : Math.abs(a.margen) - Math.abs(b.margen)) ||
+      a.numero - b.numero,
   )
   const filtradas = categoria ? filas.filter((f) => f.categoria === categoria) : filas
 
@@ -188,6 +211,9 @@ prioridad.get('/municipios/:mid/prioridad', async (c) => {
       propio: mun.suyos,
       rival: mun.rival,
       votos_rival: mun.votosRival,
+      margen: Math.round(margenCon(mun.suyos, mun.votosRival, mun.total, 0) * 10) / 10,
+      personas: personasMunicipio,
+      proyeccion: Math.round(margenCon(mun.suyos, mun.votosRival, mun.total, personasMunicipio * e) * 10) / 10,
       ln: (secciones.results as { ln: number }[]).reduce((t, s) => t + s.ln, 0),
     },
     matriz,
