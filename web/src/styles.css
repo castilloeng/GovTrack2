@@ -370,6 +370,85 @@ a:focus-visible,
 .seg .btn {
   flex: none;
 }
+
+/* Matriz de Prioridad (DISENO.md §4 "Matriz"): celdas que filtran la tabla. Celular: la etiqueta de
+   cada fila ocupa el ancho y las 2 celdas van debajo; desde iPad, la etiqueta va a la izquierda. */
+.matriz {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 18px 4px;
+}
+.matriz-col,
+.matriz-fila {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.matriz-fila {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+}
+.matriz-esquina {
+  display: none;
+}
+.matriz-celda {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.matriz-celda[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.matriz-celda:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (hover: hover) {
+  .matriz-celda:hover {
+    border-color: var(--input-border);
+  }
+  .matriz-celda[aria-pressed='true']:hover {
+    border-color: var(--accent);
+  }
+}
+.matriz-num {
+  font-size: 22px;
+  font-weight: 500;
+}
+.matriz-num small {
+  font-size: 13px;
+  color: var(--muted);
+  font-family: var(--sans);
+}
+@media (min-width: 768px) {
+  .matriz {
+    grid-template-columns: auto repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 10px;
+  }
+  .matriz-esquina {
+    display: block;
+  }
+  .matriz-fila {
+    grid-column: auto;
+    margin-top: 0;
+    padding-right: 6px;
+  }
+}
 .seccion-titulo {
   margin: 0 0 10px;
   font-size: 13px;

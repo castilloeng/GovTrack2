@@ -31,7 +31,7 @@ Esta es la **referencia obligatoria** para construir cualquier interfaz de la ve
 - **Barra lateral** a la izquierda (`flex: 1 1 220px`, fondo `--side-bg`), con el logo "G" y estos grupos:
   - **General**: Panel
   - **Estructura**: Operadores y enlaces · Asignaciones
-  - **Geografía y elección**: Secciones y colonias · Resultados
+  - **Geografía y elección**: Secciones y colonias · Resultados · Prioridad
   - **Administración**: Importaciones · Usuarios · **Configuración** (ver §6) · API
   - Las opciones se muestran según el rol: `CONSULTA` no ve Administración ni los botones de alta/edición; `CAPTURISTA` no ve Usuarios ni Configuración.
 - **Barra superior** blanca: selector de municipio, selector de proceso, búsqueda global (en el Panel) y, a la derecha, el usuario con su rol.
@@ -92,6 +92,7 @@ Se implementan como variables CSS en `:root`. Los valores de color dependen del 
 | **Pestañas** | Botones con `role="tab"` y subrayado de 2 px en `--accent` para la activa. |
 | **Pasos (stepper)** | Una `<ol>` con `aria-current="step"`; los pasos hechos llevan una palomita en un círculo `--accent` y el actual va con fondo `--accent-soft`. |
 | **Opciones con descripción** | Para elegir entre pocas opciones que necesitan explicación (rol de usuario). Un `<fieldset>` con `<legend>` y una fila por opción: `<input type="radio">` o `checkbox` nativo (20 px, `accent-color: var(--accent)`) más el nombre en 14 px/600 y la descripción en `nota`. Cada fila mide ≥ 44 px, tiene borde `--line` y radio de 8 px; la elegida lleva borde `--accent` y fondo `--accent-soft`. Toda la fila es el `<label>`. |
+| **Matriz (celdas que filtran)** | Rejilla de tarjetas pequeñas (fondo `--surface`, borde `--line`, radio 8 px, ≥ 44 px de alto) con encabezados de fila y de columna en 12 px MAYÚSCULAS. Cada celda es un `<button aria-pressed>` con el nombre, la cifra principal en mono y una línea `nota`; la elegida lleva borde `--accent` y fondo `--accent-soft`, y filtra la tabla de abajo. La celda que pide acción lleva la etiqueta de alerta. Se mantiene como rejilla también en celular (las celdas se compactan). |
 | **Íconos** | SVG de trazo de 1.8–2 px, 16–18 px y `currentColor`, con `aria-hidden`. Sin emoji. |
 
 ### Accesibilidad
@@ -197,6 +198,30 @@ Se implementan como variables CSS en `:root`. Los valores de color dependen del 
 - **Registrar persona** (Hoja): solo nombre completo y celular. Si el celular ya está registrado, se avisa al escribirlo, con enlace a esa persona. Botones "Guardar" y "Guardar y asignar" (pasa a la nueva asignación con la persona elegida). Está en Asignaciones y en Operadores y enlaces.
 - En celular la tabla se apila como tarjetas y los filtros siguen §8.
 
+### Prioridad (sin maqueta; compuesta con §2–§4)
+- Pantalla `/prioridad` en **Geografía y elección**. La ven todos los roles. Cruza el resultado de una elección con la estructura para decidir **dónde trabajar**.
+- Encabezado "Prioridad por sección" con la descripción "Cruza el resultado de *partido propio* con la estructura de cada sección." A la derecha, el selector de elección del proceso (solo las que tienen votos; por omisión Ayuntamiento).
+- Depende del **partido propio** (Configuración, §6). Si no está elegido, la pantalla muestra un aviso en lugar de la matriz: el ADMIN ve el enlace "Elegir partido propio" y los demás, "Pide al administrador que elija el partido propio".
+- Cálculos por sección (solo las casillas con resultados de la elección):
+  - **Margen** = (votos del partido propio − votos del rival principal) / votos totales, en puntos. El rival principal es el partido más votado distinto del propio. Se muestra con signo: `+4.2`, `−3.1`.
+  - **Diferencia** en votos: "Gana por 32" o "Pierde por 15".
+  - **Cobertura** = personas movilizadas / lista nominal (igual que en el Panel).
+- Clasificación: el margen se divide en **Ganada** (> +10 puntos), **Competida** (entre −10 y +10) y **Perdida** (< −10); la cobertura, en **con estructura** (≥ umbral de baja cobertura, 3 %) y **sin estructura**. Resultan 6 categorías, en este orden de prioridad:
+
+  | Categoría | Etiqueta | Lectura |
+  |---|---|---|
+  | Competida sin estructura | alerta "Prioridad" | Se decide aquí y no hay quién trabaje. |
+  | Competida con estructura | ok "Sostener" | Hay estructura; mantenerla. |
+  | Ganada sin estructura | gris "Reforzar" | Bastión débil. |
+  | Perdida con estructura | gris "Revisar" | La estructura no se refleja en votos. |
+  | Perdida sin estructura | gris "Abrir" | Terreno por abrir. |
+  | Ganada con estructura | ok "Bastión" | Sin acción inmediata. |
+
+- Arriba van 4 KPI: **Secciones prioritarias** (de cuántas con resultados), **Secciones competidas** (margen de ±10 puntos), **Ventaja en el municipio** (puntos del propio sobre el rival principal, con las siglas y porcentajes de ambos) y **Lista nominal en prioridad** (con su % del municipio).
+- **Matriz** (componente de §4): 3 filas (Ganada, Competida, Perdida) × 2 columnas (Sin estructura, Con estructura). Cada celda muestra la etiqueta, el número de secciones y su lista nominal. Al tocarla filtra la tabla; al tocarla otra vez se quita el filtro. Debajo, una `nota` explica los umbrales y cuántas secciones no tienen resultados (no entran en la matriz).
+- Tabla (paginada desde la API, ordenada por prioridad y, dentro de cada categoría, por el margen más cerrado): Sección (enlace al detalle), Categoría (etiqueta), Margen, Diferencia, Rival, Personas, Cobertura (barra) y Lista nominal. En iPad se ocultan Rival y Lista nominal; en celular, tarjetas apiladas.
+- No se usan los colores de los partidos (§4, "Barras de resultados por partido"); las categorías se distinguen por etiqueta y texto, no solo por color.
+
 ### Pantallas pendientes de diseñar
 Se construyen con los mismos componentes y layout:
 - **Configuración** (ADMIN): ver §6.
@@ -207,10 +232,16 @@ En **Administración** hay una opción **Configuración**, visible solo para ADM
 
 **Comportamiento**
 - El selector muestra 4 muestras grandes (tarjeta con nombre y una vista previa de botón, barra lateral y etiqueta) y un botón "Guardar". La vista previa se aplica al pasar o seleccionar, antes de guardar.
+- Cada tarjeta de Configuración tiene su propio botón "Guardar" (principal) al pie: **Tema del sitio** y **Partido propio**.
 - El tema es **global del sitio**: lo elige el ADMIN y lo ven todos los usuarios. Se guarda en D1, en la tabla `configuracion (clave, valor)` (migración `0002_configuracion.sql`), con la clave `tema` y los valores `azul | verde | naranja | guinda`. El valor predeterminado es `verde`, el del diseño original.
 - La API expone `GET /api/configuracion` (todas las claves, p. ej. `{ "tema": "verde" }`) y `PUT /api/configuracion/tema` con `{ "tema": "azul" }`, que solo acepta ADMIN.
 - En el frontend se aplica con `document.documentElement.dataset.tema = valor`. Solo cambian las variables de color del tema; el layout, la tipografía y los neutros quedan igual.
 - Al cargar, el valor se copia en `localStorage` para pintar el color correcto antes de que responda la API (sin parpadeo), pero la fuente de verdad es la BD.
+
+**Partido propio**
+- Segunda tarjeta de Configuración: un selector con los partidos del catálogo (siglas y nombre) más la opción "Sin elegir", y la nota "Se usa en Prioridad para calcular el margen de cada sección."
+- Se guarda en `configuracion` con la clave `partido_propio` (las siglas). `PUT /api/configuracion/partido_propio` con `{ "partido_propio": "MORENA" }` o `null` para quitarlo; solo ADMIN. `GET /api/configuracion` solo lo devuelve con sesión (sin sesión, solo el tema).
+- Es independiente del tema: elegir un partido no cambia el color del sitio.
 
 **Tokens por tema**
 

@@ -9,6 +9,7 @@ import {
   IcoBuscar,
   IcoCodigo,
   IcoDescarga,
+  IcoDiana,
   IcoFlecha,
   IcoLista,
   IcoMapa,
@@ -41,6 +42,7 @@ const MENU: Grupo[] = [
     items: [
       { to: '/secciones', texto: 'Secciones y colonias', icono: <IcoMapa />, activo: (r) => empieza('/secciones')(r) || empieza('/colonias')(r) },
       { to: '/resultados', texto: 'Resultados', icono: <IcoBarras />, activo: empieza('/resultados') },
+      { to: '/prioridad', texto: 'Prioridad', icono: <IcoDiana />, activo: empieza('/prioridad') },
     ],
   },
   {

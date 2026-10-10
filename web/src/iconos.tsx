@@ -48,6 +48,13 @@ export const IcoBarras = ({ size }: P) => (
     <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
   </Svg>
 )
+export const IcoDiana = ({ size }: P) => (
+  <Svg size={size}>
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5" />
+    <circle cx="12" cy="12" r="1" />
+  </Svg>
+)
 export const IcoDescarga = ({ size }: P) => (
   <Svg size={size}>
     <path d="M12 3v12M7 10l5 5 5-5M4 21h16" />

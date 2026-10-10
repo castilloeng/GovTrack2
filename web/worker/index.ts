@@ -5,6 +5,7 @@ import estructura from './estructura'
 import geografia from './geografia'
 import { openapi, sinDocumentar } from './openapi'
 import panel from './panel'
+import prioridad from './prioridad'
 import usuarios from './usuarios'
 
 const TEMAS = ['verde', 'azul', 'naranja', 'guinda']
@@ -60,10 +61,18 @@ app.get('/me', async (c) => {
   return c.json(u)
 })
 
-// Tema global del sitio (DISENO.md §6): lo leen todos, solo el ADMIN lo cambia.
+// Catálogo de partidos (selector del partido propio en Configuración).
+app.get('/partidos', async (c) => {
+  const { results } = await c.env.DB.prepare('SELECT id, siglas, nombre FROM partido ORDER BY siglas').all()
+  return c.json(results)
+})
+
+// Ajustes globales del sitio (DISENO.md §6): lo leen todos, solo el ADMIN los cambia.
+// Sin sesión solo se entrega el tema (se pinta también en el login); el resto exige sesión.
 app.get('/configuracion', async (c) => {
   const { results } = await c.env.DB.prepare('SELECT clave, valor FROM configuracion').all<{ clave: string; valor: string }>()
-  return c.json(Object.fromEntries(results.map((r) => [r.clave, r.valor])))
+  const conSesion = !!(await usuarioActual(c))
+  return c.json(Object.fromEntries(results.filter((r) => conSesion || r.clave === 'tema').map((r) => [r.clave, r.valor])))
 })
 
 app.put('/configuracion/tema', async (c) => {
@@ -84,6 +93,29 @@ app.put('/configuracion/tema', async (c) => {
   return c.json({ tema: body.tema })
 })
 
+// Partido propio (Prioridad): siglas de un partido del catálogo, o null para quitarlo.
+app.put('/configuracion/partido_propio', async (c) => {
+  const u = (await usuarioActual(c))!
+  if (u.rol !== 'ADMIN') throw new ErrorApi(403, 'Solo el administrador puede elegir el partido propio')
+  const body = await c.req.json<{ partido_propio?: unknown }>().catch(() => ({}) as { partido_propio?: unknown })
+  const valor = body.partido_propio
+  if (valor === null) {
+    await c.env.DB.prepare(`DELETE FROM configuracion WHERE clave = 'partido_propio'`).run()
+    return c.json({ partido_propio: null })
+  }
+  if (typeof valor !== 'string') throw new ErrorApi(400, 'partido_propio debe ser las siglas de un partido o null')
+  const partido = await c.env.DB.prepare('SELECT siglas FROM partido WHERE siglas = ?').bind(valor.trim()).first<{ siglas: string }>()
+  if (!partido) throw new ErrorApi(400, `El partido ${valor} no está en el catálogo`)
+  await c.env.DB.prepare(
+    `INSERT INTO configuracion (clave, valor, updated_by) VALUES ('partido_propio', ?1, ?2)
+     ON CONFLICT (clave) DO UPDATE SET valor = ?1, updated_by = ?2,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`,
+  )
+    .bind(partido.siglas, u.id)
+    .run()
+  return c.json({ partido_propio: partido.siglas })
+})
+
 // Procesos, secciones y colonias.
 app.route('/', geografia)
 
@@ -92,6 +124,9 @@ app.route('/', estructura)
 
 // Panel del municipio: indicadores, resultados y actividad reciente.
 app.route('/', panel)
+
+// Prioridad por sección: resultado del partido propio × estructura.
+app.route('/', prioridad)
 
 // Usuarios del sitio (solo ADMIN).
 app.route('/', usuarios)

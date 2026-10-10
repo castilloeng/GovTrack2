@@ -12,6 +12,9 @@ export const ROL_NOMBRE: Record<Rol, string> = {
 /** Umbral de "baja cobertura" (personas / lista nominal). Debe ser configurable. */
 export const UMBRAL_BAJA_COBERTURA = 3
 
+/** Prioridad: puntos de margen entre "competida" y "ganada" o "perdida". */
+export const UMBRAL_COMPETIDA = 10
+
 // ---------- Importar ----------
 
 export const TIPOS_CARGA = ['Secciones', 'Colonias', 'Casillas con lista nominal', 'Resultados por casilla']

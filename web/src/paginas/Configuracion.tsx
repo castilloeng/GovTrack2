@@ -3,9 +3,11 @@ import Shell from '../componentes/Shell'
 import { Encabezado } from '../componentes/ui'
 import { aplicarTema, cargarTema, guardarTema, temaGuardado, TEMAS, type Tema } from '../tema'
 import { IcoPalomita } from '../iconos'
+import { api, useApi, type Partido } from '../api'
 
 // Configuración → tema global del sitio (DISENO.md §6). Solo ADMIN.
 // La vista previa se aplica al pasar o seleccionar; "Guardar" lo fija en la tabla `configuracion` (D1).
+// Cada tarjeta (tema y partido propio) tiene su propio "Guardar".
 
 const NOMBRE: Record<Tema, string> = { verde: 'Verde', azul: 'Azul', naranja: 'Naranja', guinda: 'Guinda' }
 
@@ -36,29 +38,7 @@ export default function Configuracion() {
   return (
     <Shell>
       <main className="contenido angosto">
-        <Encabezado titulo="Configuración" desc="El tema define el color del sitio para todos los usuarios.">
-          <div className="barra-movil">
-            <button
-              className="btn pri"
-              type="button"
-              disabled={elegido === guardado || guardando}
-              onClick={async () => {
-                setGuardando(true)
-                try {
-                  await guardarTema(elegido)
-                  setGuardado(elegido)
-                  setAviso({ ok: true, texto: 'Tema guardado' })
-                } catch (e) {
-                  setAviso({ ok: false, texto: `No se pudo guardar: ${(e as Error).message}` })
-                } finally {
-                  setGuardando(false)
-                }
-              }}
-            >
-              {guardando ? 'Guardando…' : 'Guardar'}
-            </button>
-          </div>
-        </Encabezado>
+        <Encabezado titulo="Configuración" desc="Ajustes globales del sitio para todos los usuarios." />
 
         <section className="card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
@@ -113,13 +93,125 @@ export default function Configuracion() {
               </button>
             ))}
           </div>
-          {aviso && (
-            <p role="status" className={'tag' + (aviso.ok ? '' : ' warn')} style={{ alignSelf: 'flex-start', whiteSpace: 'normal' }}>
-              {aviso.texto}
-            </p>
-          )}
+          <div className="acciones" style={{ alignItems: 'center' }}>
+            <button
+              className="btn pri"
+              type="button"
+              disabled={elegido === guardado || guardando}
+              onClick={async () => {
+                setGuardando(true)
+                try {
+                  await guardarTema(elegido)
+                  setGuardado(elegido)
+                  setAviso({ ok: true, texto: 'Tema guardado' })
+                } catch (e) {
+                  setAviso({ ok: false, texto: `No se pudo guardar: ${(e as Error).message}` })
+                } finally {
+                  setGuardando(false)
+                }
+              }}
+            >
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
+            {aviso && (
+              <p role="status" className={'tag' + (aviso.ok ? '' : ' warn')} style={{ whiteSpace: 'normal' }}>
+                {aviso.texto}
+              </p>
+            )}
+          </div>
         </section>
+
+        <PartidoPropio />
       </main>
     </Shell>
+  )
+}
+
+/** Partido propio: base del margen en Prioridad (clave `partido_propio` de `configuracion`). */
+function PartidoPropio() {
+  const config = useApi<Record<string, string>>('/configuracion')
+  const partidos = useApi<Partido[]>('/partidos')
+  const guardado = config.datos ? (config.datos.partido_propio ?? '') : null
+  const [elegido, setElegido] = useState<string | null>(null)
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
+  const [guardando, setGuardando] = useState(false)
+  const valor = elegido ?? guardado ?? ''
+
+  return (
+    <section className="card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 }}>
+      <div>
+        <h2>Partido propio</h2>
+        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+          Se usa en Prioridad para calcular el margen de cada sección. No cambia el color del sitio.
+        </p>
+      </div>
+      {config.error || partidos.error ? (
+        <div className="muted" role="alert" style={{ fontSize: 13 }}>
+          {(config.error ?? partidos.error)!.message}{' '}
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => {
+              config.recargar()
+              partidos.recargar()
+            }}
+          >
+            Reintentar
+          </button>
+        </div>
+      ) : guardado === null || !partidos.datos ? (
+        <div className="muted" style={{ fontSize: 13 }}>
+          Cargando…
+        </div>
+      ) : (
+        <>
+          <label className="campo" style={{ maxWidth: 360 }}>
+            Partido
+            <select
+              value={valor}
+              onChange={(e) => {
+                setElegido(e.target.value)
+                setAviso(null)
+              }}
+            >
+              <option value="">Sin elegir</option>
+              {partidos.datos.map((p) => (
+                <option key={p.id} value={p.siglas}>
+                  {p.siglas}
+                  {p.nombre ? ` · ${p.nombre}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="acciones" style={{ alignItems: 'center' }}>
+            <button
+              className="btn pri"
+              type="button"
+              disabled={valor === guardado || guardando}
+              onClick={async () => {
+                setGuardando(true)
+                try {
+                  await api('/configuracion/partido_propio', { metodo: 'PUT', datos: { partido_propio: valor || null } })
+                  config.recargar()
+                  setElegido(null)
+                  setAviso({ ok: true, texto: valor ? `Partido propio: ${valor}` : 'Partido propio quitado' })
+                } catch (e) {
+                  setAviso({ ok: false, texto: `No se pudo guardar: ${(e as Error).message}` })
+                } finally {
+                  setGuardando(false)
+                }
+              }}
+            >
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
+            {aviso && (
+              <p role="status" className={'tag' + (aviso.ok ? '' : ' warn')} style={{ whiteSpace: 'normal' }}>
+                {aviso.texto}
+              </p>
+            )}
+          </div>
+        </>
+      )}
+    </section>
   )
 }

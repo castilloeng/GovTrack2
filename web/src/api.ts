@@ -192,6 +192,39 @@ export type PanelDatos = {
   elecciones: { id: number; cargo: string; ln: number; votos: number; partidos: { siglas: string; votos: number }[] }[]
 }
 
+export type Partido = { id: number; siglas: string; nombre: string | null }
+
+/** Categorías de Prioridad, en orden: banda del margen + con/sin estructura. */
+export type CategoriaPrioridad = 'competida-sin' | 'competida-con' | 'ganada-sin' | 'perdida-con' | 'perdida-sin' | 'ganada-con'
+
+export type PrioridadFila = {
+  id: number
+  numero: number
+  categoria: CategoriaPrioridad
+  votos: number
+  propio: number
+  rival: string | null
+  votos_rival: number
+  /** Puntos: (propio − rival) / votos × 100. */
+  margen: number
+  operadores: number
+  personas: number
+  ln: number
+  /** personas / ln, en %. */
+  cobertura: number
+}
+
+export type PrioridadDatos = Pagina<PrioridadFila> & {
+  partido_propio: string | null
+  proceso_id: number | null
+  eleccion: { id: number; cargo: string } | null
+  umbral_margen: number
+  umbral_cobertura: number
+  municipio: { votos: number; propio: number; rival: string | null; votos_rival: number; ln: number } | null
+  matriz: Record<CategoriaPrioridad, { secciones: number; ln: number }>
+  sin_resultados: number
+}
+
 export type EventoActividad =
   | { tipo: 'alta' | 'baja'; fecha: string; seccion: number; colonia: string; operador: string; usuario: string | null; sin_operador?: boolean }
   | { tipo: 'importacion'; fecha: string; usuario: string | null; archivo: string; destino: string; filas_ok: number; filas_error: number }
