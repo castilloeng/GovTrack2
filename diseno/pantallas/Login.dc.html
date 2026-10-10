@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Acceso a GovTrack</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Public Sans',system-ui,sans-serif;color:#17201D;background:#F4F5F2}
+a{color:#0E5A4A}a:hover{color:#09392F}
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-wrap: wrap">
+  <div style="flex: 1 1 420px; background: #13231E; color: #E8EEEA; padding: 48px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; gap: 40px">
+    <div style="display: flex; align-items: center; gap: 12px">
+      <div style="width: 40px; height: 40px; border-radius: 10px; background: #2F7A66; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 19px">G</div>
+      <div style="color: #fff; font-weight: 700; font-size: 21px">GovTrack</div>
+    </div>
+    <div style="max-width: 440px">
+      <h1 style="margin: 0; font-size: 38px; line-height: 1.15; font-weight: 700; color: #fff; letter-spacing: -0.01em">Estructura territorial y resultados electorales, en un solo lugar.</h1>
+      <p style="margin: 18px 0 0; font-size: 16px; line-height: 1.6; color: #B9C9C2">Operadores, enlaces y colonias por sección, junto a la lista nominal y los votos de cada casilla.</p>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; max-width: 460px; font-size: 13px; color: #B9C9C2">
+      <div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #fff">Municipio</div>Sección · Colonia</div>
+      <div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #fff">Operador</div>1 o 2 enlaces</div>
+      <div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: #fff">Casilla</div>Votos por elección</div>
+    </div>
+  </div>
+
+  <div style="flex: 1 1 420px; display: flex; align-items: center; justify-content: center; padding: 48px 24px; box-sizing: border-box">
+    <div style="width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 24px">
+      <div>
+        <h2 style="margin: 0; font-size: 26px; font-weight: 700">Iniciar sesión</h2>
+        <p style="margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: #55605B">Entra con la cuenta de Google que te dio de alta el administrador.</p>
+      </div>
+      <a href="Main.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; border: 1px solid #C9CFC9; border-radius: 10px; background: #fff; color: #17201D; font-weight: 600; font-size: 15px; text-decoration: none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 12h8"></path></svg>
+        Continuar con Google
+      </a>
+      <div style="display: flex; gap: 12px; padding: 14px 16px; border-radius: 10px; background: #E3EFEA; color: #0B4A3D; font-size: 14px; line-height: 1.5">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="flex: none; margin-top: 2px"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+        <span>Solo pueden entrar usuarios activos y con el correo verificado por Google. GovTrack no guarda contraseñas.</span>
+      </div>
+      <div style="font-size: 13px; color: #55605B">¿No tienes acceso? Pídelo a tu administrador.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

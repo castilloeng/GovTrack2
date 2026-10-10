@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Panel del municipio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Public Sans',system-ui,sans-serif;color:#17201D;background:#F4F5F2}
+a{color:#0E5A4A}a:hover{color:#09392F}
+.num{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.side a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:6px;color:#C9D6D0;text-decoration:none;font-size:14px}
+.side a:hover{background:#1E3530;color:#fff}
+.side a.on{background:#24423A;color:#fff;font-weight:600}
+.side h2{margin:20px 12px 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#93A9A0;font-weight:600}
+.card{background:#fff;border:1px solid #DDE1DC;border-radius:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:8px;font:600 14px 'Public Sans',sans-serif;border:1px solid #C9CFC9;background:#fff;color:#17201D;cursor:pointer;text-decoration:none;box-sizing:border-box}
+.btn.pri{background:#0E5A4A;border-color:#0E5A4A;color:#fff}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th{text-align:left;font-size:12px;font-weight:600;color:#55605B;text-transform:uppercase;letter-spacing:.05em;padding:10px 14px;border-bottom:1px solid #DDE1DC;background:#FAFBF9;white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid #EDF0EC;white-space:nowrap}
+.tbl .r{text-align:right}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;background:#E3EFEA;color:#0E5A4A}
+.tag.warn{background:#FBEADF;color:#8A3D12}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 100vh">
+  <nav class="side" aria-label="Navegación principal" style="flex: 1 1 220px; background: #13231E; padding: 20px 12px; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 12px 8px">
+      <div style="width: 32px; height: 32px; border-radius: 8px; background: #2F7A66; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 15px">G</div>
+      <div style="color: #fff; font-weight: 700; font-size: 17px">GovTrack</div>
+    </div>
+    <h2>General</h2>
+    <a class="on" href="Main.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>Panel</a>
+    <h2>Estructura</h2>
+    <a href="Operadores.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.6 2.6 3 5.2"></path></svg>Operadores y enlaces</a>
+    <a href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>Asignaciones</a>
+    <h2>Geografía y elección</h2>
+    <a href="Seccion.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"></path><path d="M9 4v14M15 6v14"></path></svg>Secciones y colonias</a>
+    <a href="Seccion.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Resultados</a>
+    <h2>Administración</h2>
+    <a href="Importar.dc.html"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"></path></svg>Importaciones</a>
+    <a href="#"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4-6 8-6s7 2 8 6"></path></svg>Usuarios</a>
+  </nav>
+
+  <div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column">
+    <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 28px; background: #fff; border-bottom: 1px solid #DDE1DC">
+      <button class="btn" type="button" aria-label="Cambiar municipio"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z"></path><circle cx="12" cy="9" r="2.5"></circle></svg>Tapachula<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <button class="btn" type="button" aria-label="Cambiar proceso electoral">Proceso 2024<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+      <label style="flex: 1 1 220px; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #C9CFC9; border-radius: 8px; color: #55605B; box-sizing: border-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+        <span style="position: absolute; left: -9999px">Buscar</span>
+        <input type="search" placeholder="Buscar persona, teléfono, sección o colonia" style="border: 0; outline: none; flex: 1; font: inherit; font-size: 14px; background: transparent; min-width: 0">
+      </label>
+      <div style="display: flex; align-items: center; gap: 10px; margin-left: auto">
+        <div style="text-align: right; line-height: 1.25">
+          <div style="font-size: 14px; font-weight: 600">Rosain Castillo</div>
+          <div style="font-size: 12px; color: #55605B">Administrador</div>
+        </div>
+        <div style="width: 38px; height: 38px; border-radius: 50%; background: #E3EFEA; color: #0E5A4A; display: flex; align-items: center; justify-content: center; font-weight: 700">RC</div>
+      </div>
+    </header>
+
+    <main style="padding: 28px; display: flex; flex-direction: column; gap: 24px; max-width: 1200px; box-sizing: border-box; width: 100%">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+        <div>
+          <div style="font-size: 13px; color: #55605B; font-weight: 600; text-transform: uppercase; letter-spacing: .06em">Panel del municipio</div>
+          <h1 style="margin: 4px 0 0; font-size: 30px; font-weight: 700; letter-spacing: -0.01em">Tapachula</h1>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px">
+          <button class="btn" type="button">Exportar a Excel</button>
+          <a class="btn pri" href="Operadores.dc.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Nueva asignación</a>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px">
+        <div class="card" style="padding: 18px 20px">
+          <div style="font-size: 13px; color: #55605B; font-weight: 600">Secciones cubiertas</div>
+          <div class="num" style="font-size: 30px; font-weight: 500; margin-top: 6px">112 <span style="font-size: 16px; color: #55605B">/ 148</span></div>
+          <div style="height: 6px; background: #EDF0EC; border-radius: 3px; margin-top: 12px"><div style="width: 76%; height: 6px; background: #0E5A4A; border-radius: 3px"></div></div>
+        </div>
+        <div class="card" style="padding: 18px 20px">
+          <div style="font-size: 13px; color: #55605B; font-weight: 600">Operadores activos</div>
+          <div class="num" style="font-size: 30px; font-weight: 500; margin-top: 6px">386</div>
+          <div style="font-size: 13px; color: #55605B; margin-top: 8px">en 214 colonias</div>
+        </div>
+        <div class="card" style="padding: 18px 20px">
+          <div style="font-size: 13px; color: #55605B; font-weight: 600">Enlaces</div>
+          <div class="num" style="font-size: 30px; font-weight: 500; margin-top: 6px">154</div>
+          <div style="font-size: 13px; color: #55605B; margin-top: 8px">2.5 operadores por enlace</div>
+        </div>
+        <div class="card" style="padding: 18px 20px">
+          <div style="font-size: 13px; color: #55605B; font-weight: 600">Personas movilizadas</div>
+          <div class="num" style="font-size: 30px; font-weight: 500; margin-top: 6px">9,420</div>
+          <div style="font-size: 13px; color: #55605B; margin-top: 8px">3.8 % de la lista nominal</div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+        <section class="card" style="flex: 999 1 520px; min-width: 0; overflow: hidden">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px">
+            <h2 style="margin: 0; font-size: 17px">Cobertura por sección</h2>
+            <div style="display: flex; gap: 6px">
+              <button class="btn" type="button" style="min-height: 36px; font-size: 13px; background: #17201D; color: #fff; border-color: #17201D">Todas</button>
+              <button class="btn" type="button" style="min-height: 36px; font-size: 13px">Sin operador</button>
+              <button class="btn" type="button" style="min-height: 36px; font-size: 13px">Baja cobertura</button>
+            </div>
+          </div>
+          <div style="overflow-x: auto">
+            <table class="tbl">
+              <thead><tr><th>Sección</th><th class="r">Colonias</th><th class="r">Operadores</th><th class="r">Personas</th><th class="r">Lista nominal</th><th>Cobertura</th></tr></thead>
+              <tbody>
+                <tr><td><a href="Seccion.dc.html" class="num" style="font-weight: 500">0812</a></td><td class="r num">6</td><td class="r num">9</td><td class="r num">214</td><td class="r num">2,980</td><td><div style="display: flex; align-items: center; gap: 8px"><div style="width: 90px; height: 6px; background: #EDF0EC; border-radius: 3px"><div style="width: 72%; height: 6px; background: #0E5A4A; border-radius: 3px"></div></div><span class="num" style="font-size: 13px">7.2 %</span></div></td></tr>
+                <tr><td><a href="Seccion.dc.html" class="num" style="font-weight: 500">0813</a></td><td class="r num">4</td><td class="r num">5</td><td class="r num">131</td><td class="r num">2,410</td><td><div style="display: flex; align-items: center; gap: 8px"><div style="width: 90px; height: 6px; background: #EDF0EC; border-radius: 3px"><div style="width: 54%; height: 6px; background: #0E5A4A; border-radius: 3px"></div></div><span class="num" style="font-size: 13px">5.4 %</span></div></td></tr>
+                <tr><td><a href="Seccion.dc.html" class="num" style="font-weight: 500">0815</a></td><td class="r num">3</td><td class="r num">2</td><td class="r num">48</td><td class="r num">1,905</td><td><div style="display: flex; align-items: center; gap: 8px"><div style="width: 90px; height: 6px; background: #EDF0EC; border-radius: 3px"><div style="width: 25%; height: 6px; background: #B4531B; border-radius: 3px"></div></div><span class="num" style="font-size: 13px">2.5 %</span></div></td></tr>
+                <tr><td><a href="Seccion.dc.html" class="num" style="font-weight: 500">0821</a></td><td class="r num">7</td><td class="r num">11</td><td class="r num">302</td><td class="r num">3,640</td><td><div style="display: flex; align-items: center; gap: 8px"><div style="width: 90px; height: 6px; background: #EDF0EC; border-radius: 3px"><div style="width: 83%; height: 6px; background: #0E5A4A; border-radius: 3px"></div></div><span class="num" style="font-size: 13px">8.3 %</span></div></td></tr>
+                <tr><td><a href="Seccion.dc.html" class="num" style="font-weight: 500">0824</a></td><td class="r num">5</td><td class="r num">0</td><td class="r num">0</td><td class="r num">2,155</td><td><span class="tag warn">Sin operador</span></td></tr>
+                <tr><td><a href="Seccion.dc.html" class="num" style="font-weight: 500">0830</a></td><td class="r num">2</td><td class="r num">3</td><td class="r num">77</td><td class="r num">1,320</td><td><div style="display: flex; align-items: center; gap: 8px"><div style="width: 90px; height: 6px; background: #EDF0EC; border-radius: 3px"><div style="width: 58%; height: 6px; background: #0E5A4A; border-radius: 3px"></div></div><span class="num" style="font-size: 13px">5.8 %</span></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="padding: 12px 18px; font-size: 13px; color: #55605B">Mostrando 6 de 148 secciones · <a href="#">Ver todas</a></div>
+        </section>
+
+        <div style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 24px">
+          <section class="card" style="padding: 18px">
+            <h2 style="margin: 0 0 4px; font-size: 17px">Resultado 2024 · Ayuntamiento</h2>
+            <div style="font-size: 13px; color: #55605B; margin-bottom: 14px">Votación total del municipio</div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+              <div><div style="display: flex; justify-content: space-between"><span>Partido A</span><span class="num">41.2 %</span></div><div style="height: 8px; background: #EDF0EC; border-radius: 4px; margin-top: 4px"><div style="width: 41.2%; height: 8px; background: #0E5A4A; border-radius: 4px"></div></div></div>
+              <div><div style="display: flex; justify-content: space-between"><span>Partido B</span><span class="num">27.9 %</span></div><div style="height: 8px; background: #EDF0EC; border-radius: 4px; margin-top: 4px"><div style="width: 27.9%; height: 8px; background: #5E7F75; border-radius: 4px"></div></div></div>
+              <div><div style="display: flex; justify-content: space-between"><span>Partido C</span><span class="num">16.4 %</span></div><div style="height: 8px; background: #EDF0EC; border-radius: 4px; margin-top: 4px"><div style="width: 16.4%; height: 8px; background: #8FA59C; border-radius: 4px"></div></div></div>
+              <div><div style="display: flex; justify-content: space-between"><span>Otros</span><span class="num">14.5 %</span></div><div style="height: 8px; background: #EDF0EC; border-radius: 4px; margin-top: 4px"><div style="width: 14.5%; height: 8px; background: #BFCBC5; border-radius: 4px"></div></div></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid #EDF0EC; font-size: 13px; color: #55605B"><span>Participación</span><span class="num" style="color: #17201D">58.6 %</span></div>
+          </section>
+
+          <section class="card" style="padding: 18px">
+            <h2 style="margin: 0 0 12px; font-size: 17px">Actividad reciente</h2>
+            <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; font-size: 14px">
+              <li style="display: flex; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E5A4A; margin-top: 6px; flex: none"></span><div><div>Importación de casillas completada: <span class="num">1,180</span> filas</div><div style="font-size: 12px; color: #55605B; margin-top: 2px">Hoy, 10:42 · Rosain Castillo</div></div></li>
+              <li style="display: flex; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #0E5A4A; margin-top: 6px; flex: none"></span><div><div>Nueva asignación en sección <span class="num">0812</span>, Col. Centro</div><div style="font-size: 12px; color: #55605B; margin-top: 2px">Hoy, 09:15 · Capturista</div></div></li>
+              <li style="display: flex; gap: 10px"><span style="width: 8px; height: 8px; border-radius: 50%; background: #B4531B; margin-top: 6px; flex: none"></span><div><div>Sección <span class="num">0824</span> quedó sin operador</div><div style="font-size: 12px; color: #55605B; margin-top: 2px">Ayer, 18:03</div></div></li>
+            </ul>
+          </section>
+        </div>
+      </div>
+      <p style="margin: 0; font-size: 12px; color: #55605B">Cifras de ejemplo para el diseño.</p>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

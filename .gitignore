@@ -22,9 +22,9 @@ Thumbs.db
 
 # Archivos temporales generados por scripts SQL
 _tmp_*.sql
-_tmp_migrate_seccion.sql
 
-db/*.db
-GovTrackDB.db
-db/GovTrackDB.db-shm
-db/GovTrackDB.db-wal
+# Base local de la app de escritorio (datos de prueba)
+electron/db/*.db
+electron/db/*.db-shm
+electron/db/*.db-wal
+electron/GovTrackDB.db

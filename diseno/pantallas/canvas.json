@@ -1,0 +1,19 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-09T18:00:00Z"},
+  "title": "GovTrack Web",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 1360, "y": 0, "w": 1280, "h": 980, "title": "Panel del municipio", "expand": "fill", "is_interactive": true},
+    "Login.dc.html": {"x": 0, "y": 0, "w": 1280, "h": 800, "title": "Acceso con Google", "expand": "fill", "is_interactive": true},
+    "Operadores.dc.html": {"x": 0, "y": 1100, "w": 1280, "h": 1000, "title": "Operadores y enlaces", "expand": "fill", "is_interactive": true},
+    "Seccion.dc.html": {"x": 1360, "y": 1100, "w": 1280, "h": 1120, "title": "Detalle de sección", "expand": "fill", "is_interactive": true},
+    "Importar.dc.html": {"x": 0, "y": 2340, "w": 1280, "h": 940, "title": "Importar desde Excel", "expand": "fill", "is_interactive": true}
+  },
+  "order": ["Main.dc.html", "Login.dc.html", "Operadores.dc.html", "Seccion.dc.html", "Importar.dc.html"],
+  "notes": {
+    "titulo": {"x": 0, "y": -300, "text": "GovTrack Web — pantallas principales", "kind": "title1", "maxW": 2640}
+  },
+  "designSystems": []
+}

@@ -2,16 +2,18 @@
 
 Sistema para gestionar la estructura territorial de operadores y enlaces por municipio, sección electoral y colonia, junto con los resultados electorales por casilla.
 
-El repositorio contiene dos cosas:
+El repositorio contiene:
 
-- **App de escritorio actual** (raíz del repo): Electron + better-sqlite3. Es la versión en uso.
+- **`electron/`**: la app de escritorio actual (Electron + better-sqlite3). Es la versión en uso.
 - **`migracion/`**: el rediseño para la nueva **versión web**. Está en construcción y todavía no reemplaza a la app de escritorio.
+- **`diseno/`**: la guía de diseño de la versión web (`DISENO.md`) y el respaldo de las pantallas aprobadas. Está fuera de `migracion/` para que modificarla no dispare un deploy en Cloudflare.
 
-## App de escritorio (actual)
+## App de escritorio (`electron/`)
 
-- Se ejecuta con `npm start` (Electron). La entrada es `main.js`, las vistas están en `view/*.html` y la lógica en `js/*.js`.
-- Acceso a datos: `js/ipcHandlers.js` (handlers IPC) y `js/db.js` (crea las tablas y aplica migraciones simples al arrancar).
-- La base es `db/GovTrackDB.db` (SQLite). No se versiona y **sus datos son de prueba**.
+- Es un proyecto independiente con su propio `package.json` y `node_modules`. Se ejecuta con `cd electron && npm start`. La entrada es `electron/main.js`, las vistas están en `electron/view/*.html` y la lógica en `electron/js/*.js`.
+- `electron/Update.sh` hace `git pull` y `npm install` dentro de `electron/`.
+- Acceso a datos: `electron/js/ipcHandlers.js` (handlers IPC) y `electron/js/db.js` (crea las tablas y aplica migraciones simples al arrancar).
+- La base es `electron/db/GovTrackDB.db` (SQLite). No se versiona y **sus datos son de prueba**.
 - `better-sqlite3` está compilado para la ABI de Electron, así que no se puede cargar con `node` directamente. Para inspeccionar la BD usa Python (`sqlite3`) o el CLI `sqlite3`.
 - Las tablas actuales y su significado real (los nombres son engañosos):
 
@@ -51,6 +53,12 @@ migracion/
 
 Stack: **React + Vite + TypeScript** en el frontend; **Hono** en el Worker; **D1** como BD. Un solo Worker sirve el build de React (assets estáticos, modo SPA) y la API (`run_worker_first: ["/api/*"]`), así que no hay CORS ni dominios separados.
 
+### Diseño de la interfaz
+
+- **Toda interfaz web nueva debe seguir [`diseno/DISENO.md`](diseno/DISENO.md)**: layout, tokens, componentes, consideraciones por pantalla, tema configurable (azul, verde, naranja o guinda) y soporte para celular y iPad.
+- Los diseños aprobados están en `diseno/pantallas/*.dc.html`. Son maquetas HTML de referencia, no código que se importe. El lienzo original es https://claude.ai/artifact/NCEy3bEPtkJDFBemoG8SJs
+- Los diseños aprobados no se modifican. Si hace falta un patrón nuevo, se documenta primero en `DISENO.md`.
+
 ### Comandos (ejecutar dentro de `migracion/`)
 
 ```bash
@@ -82,8 +90,8 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
   | Build command | `npm run build` |
   | Deploy command | `npx wrangler deploy` |
   | Non-production deploy command | `npx wrangler versions upload` |
-  | Build watch paths | `migracion/*` |
-- **Flujo**: cada push a `main` que toque `migracion/` dispara build y deploy automáticos. Alternativa manual: `npm run deploy` desde `migracion/`.
+  | Build watch paths | Include: `migracion/*` · Exclude (recomendado): `migracion/**/*.md` |
+- **Flujo**: cada push a `main` que toque `migracion/` dispara build y deploy automáticos. Los cambios en `electron/`, `diseno/` o `CLAUDE.md` no publican nada. Alternativa manual: `npm run deploy` desde `migracion/`.
 - **Base de datos**: el binding de D1 (`DB` → `govtrack`) se toma de `wrangler.jsonc`, no se configura en el panel.
 - **Migraciones**: **no** se aplican en el deploy. Tras agregar una migración nueva, correr `npm run db:migrate:remote` desde `migracion/`.
   - La BD remota tiene aplicada la `0001` y contiene los municipios de prueba TAPACHULA y CACAHOATAN.
@@ -115,5 +123,6 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 ### Pendiente
 
 - Login con Google y control de acceso por rol/municipio en la API (hoy solo existen `/api/health` y `/api/municipios`, sin autenticación).
-- Script de carga de catálogos desde `db/GovTrackDB.db` o Excel.
-- Frontend web.
+- Script de carga de catálogos desde `electron/db/GovTrackDB.db` o Excel.
+- Frontend web, siguiendo `diseno/DISENO.md`.
+- Pantalla de Configuración (tema del sitio) y su migración `configuracion`.
