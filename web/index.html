@@ -1,9 +1,22 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-tema="verde">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>GovTrack</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      // Aplica el tema guardado antes de pintar para evitar el parpadeo de color (DISENO.md §6).
+      try {
+        var t = localStorage.getItem('govtrack.tema')
+        if (t === 'azul' || t === 'verde' || t === 'naranja' || t === 'guinda') document.documentElement.dataset.tema = t
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

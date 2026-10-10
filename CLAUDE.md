@@ -124,5 +124,6 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 
 - Login con Google y control de acceso por rol/municipio en la API (hoy solo existen `/api/health` y `/api/municipios`, sin autenticación).
 - Script de carga de catálogos desde `desktop/db/GovTrackDB.db` o Excel.
-- Frontend web, siguiendo `diseno/DISENO.md`.
-- Pantalla de Configuración (tema del sitio) y su migración `configuracion`.
+- Conectar el frontend a la API. Las pantallas de `diseno/pantallas/` (más Configuración) ya están maquetadas en `web/src/paginas/`, pero usan los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
+- Diseñar e implementar Asignaciones y Usuarios (hoy muestran "pendiente de diseño").
+- Migración `configuracion` y endpoint del tema. Hoy el tema solo se guarda en `localStorage` (`web/src/tema.ts`).
