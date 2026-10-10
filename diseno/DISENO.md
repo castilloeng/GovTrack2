@@ -89,6 +89,7 @@ Se implementan como variables CSS en `:root`. Los valores de color dependen del 
 | **Etiqueta (tag)** | Píldora de 12 px/600: ok, alerta o gris. |
 | **Pestañas** | Botones con `role="tab"` y subrayado de 2 px en `--accent` para la activa. |
 | **Pasos (stepper)** | Una `<ol>` con `aria-current="step"`; los pasos hechos llevan una palomita en un círculo `--accent` y el actual va con fondo `--accent-soft`. |
+| **Opciones con descripción** | Para elegir entre pocas opciones que necesitan explicación (rol de usuario). Un `<fieldset>` con `<legend>` y una fila por opción: `<input type="radio">` o `checkbox` nativo (20 px, `accent-color: var(--accent)`) más el nombre en 14 px/600 y la descripción en `nota`. Cada fila mide ≥ 44 px, tiene borde `--line` y radio de 8 px; la elegida lleva borde `--accent` y fondo `--accent-soft`. Toda la fila es el `<label>`. |
 | **Íconos** | SVG de trazo de 1.8–2 px, 16–18 px y `currentColor`, con `aria-hidden`. Sin emoji. |
 
 ### Accesibilidad
@@ -162,10 +163,23 @@ Se implementan como variables CSS en `:root`. Los valores de color dependen del 
 - A un lado va la bitácora (tabla `importacion`) con el estado Completada o Falló.
 - Solo entran ADMIN y CAPTURISTA.
 
+### Usuarios (Administración, sin maqueta; compuesta con §2–§4)
+- Solo ADMIN (`/usuarios`). Otro rol que llegue por URL ve un aviso "Solo el administrador puede administrar usuarios".
+- Encabezado "Usuarios" con la descripción "Quién puede entrar al sitio. Cada persona entra con su cuenta de Google." y la acción principal "Nuevo usuario".
+- Filtros: búsqueda por nombre o email y los segmentos Todos · Activos · Inactivos. La lista no se pagina (son pocos usuarios); el pie dice "*n* usuarios".
+- Tabla (tarjetas apiladas en celular): **Usuario** (nombre en negrita y email debajo en `nota`), **Rol** (etiqueta gris), **Municipios** ("Todos" para ADMIN; si no, los nombres separados por coma, o la etiqueta de alerta "Sin municipios"), **Último acceso** (`Hoy, 09:15`, `6 oct 2026` o "Aún no entra" si nunca ha iniciado sesión), **Estado** (etiqueta ok "Activo" o gris "Inactivo") y la acción "Editar". La fila del usuario actual lleva la etiqueta gris "Tú".
+- El formulario (Hoja) tiene:
+  - **Nombre** y **Email** (`type="email"`). El email solo se puede cambiar mientras el usuario no haya entrado; después queda de solo lectura con la nota "Ya entró con esta cuenta de Google".
+  - **Rol** como opciones con descripción (ver "Opciones con descripción" en §4): Administrador (todo, incluidos usuarios y configuración), Capturista (captura y consulta en sus municipios), Consulta (solo consulta en sus municipios).
+  - **Municipios permitidos** como casillas de verificación, obligatorio al menos uno salvo para ADMIN; con ADMIN se ocultan y se muestra la nota "El administrador ve todos los municipios".
+  - **Activo** (casilla) solo al editar. Un usuario inactivo no puede entrar y su sesión abierta deja de funcionar en la siguiente petición.
+- Los usuarios **no se borran** (las bitácoras los referencian): se desactivan.
+- Protecciones: el ADMIN no puede cambiar su propio rol ni desactivarse, y siempre debe quedar al menos un ADMIN activo. El formulario lo explica en lugar de mostrar los controles deshabilitados sin razón.
+- El selector de municipio de la barra superior solo lista los municipios permitidos del usuario (ADMIN ve todos).
+
 ### Pantallas pendientes de diseñar
 Se construyen con los mismos componentes y layout:
 - **Asignaciones**: tabla completa filtrable y formulario de alta.
-- **Usuarios** (ADMIN): alta por email, rol, municipios permitidos, activo/inactivo.
 - **Configuración** (ADMIN): ver §6.
 
 ## 6. Tema configurable (Administración → Configuración)

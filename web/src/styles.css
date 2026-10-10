@@ -1296,6 +1296,59 @@ a:focus-visible,
   gap: 4px 8px;
 }
 
+/* ---------- Opciones con descripción (DISENO.md §4) ---------- */
+.opciones {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.opciones legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.opcion:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.opcion:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.opcion input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+}
+.opcion > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.opcion-nombre {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
 /* ---------- Administración → API ---------- */
 .api-texto {
   margin: 0 0 8px;

@@ -16,6 +16,8 @@ const MID = path('mid', 'Id del municipio.')
 const SID = path('id', 'Id de la sección.')
 const PID = path('id', 'Id de la persona.')
 const AID = path('id', 'Id de la asignación.')
+const UID = path('id', 'Id del usuario.')
+const SOLO_ADMIN = { '401': err('No autenticado.'), '403': err('El usuario no es ADMIN.') }
 const FILTROS_PERSONA = [
   query('q', 'Parte del nombre o del teléfono (desde 3 dígitos).'),
   query('seccion', 'Número de sección.', { type: 'integer' }),
@@ -60,6 +62,7 @@ export const openapi = {
     { name: 'Secciones', description: 'Secciones electorales, casillas y resultados.' },
     { name: 'Colonias', description: 'Colonias y su relación con las secciones.' },
     { name: 'Panel', description: 'Indicadores del municipio, resultados y actividad reciente.' },
+    { name: 'Usuarios', description: 'Usuarios del sitio, su rol y sus municipios. Solo ADMIN. No se borran: se desactivan.' },
     { name: 'Estructura', description: 'Personas (padrón), operadores, enlaces y asignaciones. El rol se deduce de las relaciones.' },
   ],
   components: {
@@ -73,6 +76,34 @@ export const openapi = {
         type: 'object',
         properties: { id: int, email: { type: 'string', format: 'email' }, nombre: { type: 'string' }, rol: ref('Rol') },
         required: ['id', 'email', 'nombre', 'rol'],
+      },
+      UsuarioFila: {
+        type: 'object',
+        properties: {
+          id: int,
+          email: { type: 'string', format: 'email' },
+          nombre: { type: 'string' },
+          rol: ref('Rol'),
+          activo: { type: 'boolean' },
+          vinculado: { type: 'boolean', description: 'Ya entró con Google (tiene `google_sub`); su email ya no se puede cambiar.' },
+          ultimo_acceso: nullable('string', { format: 'date-time' }),
+          created_at: { type: 'string', format: 'date-time' },
+          municipios: {
+            type: 'array',
+            description: 'Municipios permitidos. Vacío para ADMIN (ve todos).',
+            items: { type: 'object', properties: { id: int, nombre: { type: 'string' } } },
+          },
+        },
+        required: ['id', 'email', 'nombre', 'rol', 'activo', 'vinculado', 'municipios'],
+      },
+      UsuarioEntrada: {
+        type: 'object',
+        properties: {
+          email: { type: 'string', format: 'email' },
+          nombre: { type: 'string' },
+          rol: ref('Rol'),
+          municipios: { type: 'array', items: int, description: 'Ids de municipio. Al menos uno salvo para ADMIN, que los ignora.' },
+        },
       },
       Municipio: { type: 'object', properties: { id: int, clave_ine: nullable('integer'), nombre: { type: 'string' } }, required: ['id', 'nombre'] },
       Cargo: { type: 'string', enum: ['PRESIDENCIA', 'SENADURIA', 'DIPUTACION_FEDERAL', 'GUBERNATURA', 'DIPUTACION_LOCAL', 'AYUNTAMIENTO'] },
@@ -338,7 +369,12 @@ export const openapi = {
       },
     },
     '/municipios': {
-      get: { tags: ['General'], summary: 'Municipios', responses: { '200': json({ type: 'array', items: ref('Municipio') }), ...SIN_SESION } },
+      get: {
+        tags: ['General'],
+        summary: 'Municipios del usuario',
+        description: 'ADMIN ve todos; el resto, solo sus municipios permitidos (`usuario_municipio`).',
+        responses: { '200': json({ type: 'array', items: ref('Municipio') }), ...SIN_SESION },
+      },
     },
     '/procesos': {
       get: {
@@ -601,6 +637,45 @@ export const openapi = {
           ...ESCRITURA,
           '404': err('La persona no existe.'),
           '409': err('Ya está asignado a esa colonia en esa sección, o la persona está dada de baja.'),
+        },
+      },
+    },
+    '/usuarios': {
+      get: {
+        tags: ['Usuarios'],
+        summary: 'Usuarios',
+        description: 'Sin paginar. Los activos primero, por nombre.',
+        parameters: [query('q', 'Parte del nombre o del email.'), query('estado', 'Solo activos o inactivos.', { type: 'string', enum: ['activos', 'inactivos'] })],
+        responses: { '200': json({ type: 'array', items: ref('UsuarioFila') }), '400': err('estado inválido.'), ...SOLO_ADMIN },
+      },
+      post: {
+        tags: ['Usuarios'],
+        summary: 'Dar de alta un usuario',
+        description: 'Alta por email; entra con Google y en su primer login se guarda su `google_sub`.',
+        requestBody: cuerpo({ allOf: [ref('UsuarioEntrada'), { required: ['email', 'nombre', 'rol'] }] }),
+        responses: {
+          '201': json({ type: 'object', properties: { id: int } }, 'Creado'),
+          '400': err('Datos inválidos, municipio inexistente o sin municipios (rol distinto de ADMIN).'),
+          ...SOLO_ADMIN,
+          '409': err('Ya hay un usuario con ese email.'),
+        },
+      },
+    },
+    '/usuarios/{id}': {
+      patch: {
+        tags: ['Usuarios'],
+        summary: 'Editar un usuario',
+        description:
+          'Solo cambia los campos presentes; `municipios` reemplaza la lista. El email solo se cambia mientras el usuario no haya entrado. ' +
+          'El ADMIN no puede cambiar su propio rol ni desactivarse, y siempre debe quedar un ADMIN activo. Un usuario inactivo no entra y su sesión deja de funcionar.',
+        parameters: [UID],
+        requestBody: cuerpo({ allOf: [ref('UsuarioEntrada'), { type: 'object', properties: { activo: { type: 'boolean' } } }] }),
+        responses: {
+          '200': json(Ok),
+          '400': err('Datos inválidos, municipio inexistente o sin municipios.'),
+          ...SOLO_ADMIN,
+          '404': err('El usuario no existe.'),
+          '409': err('Email repetido o ya vinculado, cambio de rol o desactivación propia, o se quedaría sin ADMIN activo.'),
         },
       },
     },

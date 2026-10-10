@@ -70,6 +70,16 @@ export type Usuario = { id: number; email: string; nombre: string; rol: 'ADMIN' 
 
 export type Pagina<T> = { total: number; filas: T[] }
 
+export type UsuarioFila = Usuario & {
+  activo: boolean
+  /** Ya entró con Google; su email ya no se puede cambiar. */
+  vinculado: boolean
+  ultimo_acceso: string | null
+  created_at: string
+  /** Vacío para ADMIN (ve todos). */
+  municipios: { id: number; nombre: string }[]
+}
+
 export type SeccionFila = {
   id: number
   numero: number

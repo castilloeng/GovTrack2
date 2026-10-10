@@ -43,7 +43,7 @@ Se va a pasar de la app de escritorio a una **aplicación web multiusuario** sob
 ```
 web/
 ├── src/                 # Frontend React (TypeScript)
-├── worker/             # Worker: API con Hono bajo /api/* (index.ts, auth.ts, comun.ts, geografia.ts, openapi.ts)
+├── worker/             # Worker: API con Hono bajo /api/* (index.ts, auth.ts, comun.ts, geografia.ts, estructura.ts, panel.ts, usuarios.ts, openapi.ts)
 ├── scripts/            # Utilidades locales (p. ej. seed_desde_desktop.py)
 ├── migrations/          # Migraciones D1 (0001_esquema_inicial.sql = esquema completo)
 ├── index.html           # Entrada de Vite
@@ -143,8 +143,8 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 ### Pendiente
 
 - Carga de catálogos desde Excel (desde el SQLite de escritorio ya existe `web/scripts/seed_desde_desktop.py`).
-- Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`), **Operadores y enlaces** (`/operadores`, `/operadores/:id`) **Panel** (`/`) y los selectores de municipio y proceso ya usan la API; Importar sigue con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
-- Diseñar e implementar Asignaciones y Usuarios (hoy muestran "pendiente de diseño").
+- Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`), **Operadores y enlaces** (`/operadores`, `/operadores/:id`), **Panel** (`/`), **Usuarios** (`/usuarios`) y los selectores de municipio y proceso ya usan la API; Importar sigue con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
+- Diseñar e implementar Asignaciones (hoy muestra "pendiente de diseño").
 
 ### Documentación de la API (OpenAPI)
 
@@ -164,6 +164,13 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 - `GET /api/municipios/:mid/panel?proceso=`: KPI (secciones y secciones cubiertas, operadores, colonias cubiertas, enlaces, personas y lista nominal) y la votación total de cada elección del proceso. El panel muestra Ayuntamiento (o la primera elección con votos), los 3 partidos más votados más "Otros", y la participación sobre la lista nominal de las casillas con resultados.
 - `GET /api/municipios/:mid/actividad?limite=`: altas y bajas de asignaciones e importaciones, la más reciente primero. Las bajas traen `sin_operador` si la sección se quedó sin operadores.
 - La tabla "Cobertura por sección" usa `GET /api/municipios/:mid/secciones` con `?filtro=baja-cobertura&umbral=` (por omisión 3 %; en el frontend, `UMBRAL_BAJA_COBERTURA` de `web/src/datos.ts`).
+
+### API de usuarios (`web/worker/usuarios.ts`)
+
+- Solo ADMIN: `GET /api/usuarios` (sin paginar; `?q=` nombre o email, `?estado=activos|inactivos`), `POST /api/usuarios` (`{ email, nombre, rol, municipios }`) y `PATCH /api/usuarios/:id` (campos presentes, más `activo`; `municipios` reemplaza la lista).
+- No hay DELETE: los usuarios se desactivan (`importacion` y `created_by` los referencian). `usuarioActual()` solo acepta activos, así que desactivar corta la sesión en la siguiente petición.
+- Reglas: CAPTURISTA y CONSULTA necesitan al menos un municipio (ADMIN no guarda lista); el email solo cambia mientras no haya entrado (`google_sub` nulo); el ADMIN no cambia su propio rol ni se desactiva, y siempre queda un ADMIN activo.
+- `GET /api/municipios` devuelve solo los municipios permitidos del usuario (ADMIN, todos), así que el selector de la barra superior no ofrece municipios sin acceso.
 
 ### API de secciones y colonias (`web/worker/geografia.ts`)
 

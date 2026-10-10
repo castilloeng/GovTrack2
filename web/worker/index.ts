@@ -5,6 +5,7 @@ import estructura from './estructura'
 import geografia from './geografia'
 import { openapi, sinDocumentar } from './openapi'
 import panel from './panel'
+import usuarios from './usuarios'
 
 const TEMAS = ['verde', 'azul', 'naranja', 'guinda']
 
@@ -39,9 +40,16 @@ app.use(async (c, next) => {
 // Documentación OpenAPI (worker/openapi.ts). `x-sin-documentar` avisa de rutas que faltan en la especificación.
 app.get('/openapi.json', (c) => c.json({ ...openapi, 'x-sin-documentar': sinDocumentar(app.routes) }))
 
+// Municipios que puede ver el usuario: ADMIN todos; el resto, los de usuario_municipio.
 app.get('/municipios', async (c) => {
-  const { results } = await c.env.DB.prepare(
-    'SELECT id, clave_ine, nombre FROM municipio ORDER BY nombre',
+  const u = (await usuarioActual(c))!
+  const { results } = await (u.rol === 'ADMIN'
+    ? c.env.DB.prepare('SELECT id, clave_ine, nombre FROM municipio ORDER BY nombre')
+    : c.env.DB.prepare(
+        `SELECT m.id, m.clave_ine, m.nombre FROM municipio m
+         JOIN usuario_municipio um ON um.municipio_id = m.id AND um.usuario_id = ?
+         ORDER BY m.nombre`,
+      ).bind(u.id)
   ).all()
   return c.json(results)
 })
@@ -84,6 +92,9 @@ app.route('/', estructura)
 
 // Panel del municipio: indicadores, resultados y actividad reciente.
 app.route('/', panel)
+
+// Usuarios del sitio (solo ADMIN).
+app.route('/', usuarios)
 
 app.notFound((c) => c.json({ error: 'Ruta no encontrada' }, 404))
 
