@@ -143,7 +143,7 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 ### Pendiente
 
 - Carga de catálogos desde Excel (desde el SQLite de escritorio ya existe `web/scripts/seed_desde_desktop.py`).
-- Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`), **Operadores y enlaces** (`/operadores`, `/operadores/:id`) y los selectores de municipio y proceso ya usan la API; Panel e Importar siguen con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
+- Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`), **Operadores y enlaces** (`/operadores`, `/operadores/:id`) **Panel** (`/`) y los selectores de municipio y proceso ya usan la API; Importar sigue con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
 - Diseñar e implementar Asignaciones y Usuarios (hoy muestran "pendiente de diseño").
 
 ### Documentación de la API (OpenAPI)
@@ -159,12 +159,18 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 - Escrituras (ADMIN o CAPTURISTA): `POST /api/municipios/:mid/personas` (con `enlaces` crea un operador), `PATCH /api/personas/:id`, `PUT /api/personas/:id/enlaces`, `DELETE /api/personas/:id` (baja lógica de la persona y sus asignaciones; no si es enlace de operadores activos), `POST /api/personas/:id/asignaciones`, `PATCH` y `DELETE /api/asignaciones/:id` (baja lógica).
 - Es operador quien tiene asignaciones vigentes o enlaces; es enlace quien aparece en `operador_enlace` de un operador activo. El detalle de cada ruta está en la especificación OpenAPI.
 
+### API del panel (`web/worker/panel.ts`)
+
+- `GET /api/municipios/:mid/panel?proceso=`: KPI (secciones y secciones cubiertas, operadores, colonias cubiertas, enlaces, personas y lista nominal) y la votación total de cada elección del proceso. El panel muestra Ayuntamiento (o la primera elección con votos), los 3 partidos más votados más "Otros", y la participación sobre la lista nominal de las casillas con resultados.
+- `GET /api/municipios/:mid/actividad?limite=`: altas y bajas de asignaciones e importaciones, la más reciente primero. Las bajas traen `sin_operador` si la sección se quedó sin operadores.
+- La tabla "Cobertura por sección" usa `GET /api/municipios/:mid/secciones` con `?filtro=baja-cobertura&umbral=` (por omisión 3 %; en el frontend, `UMBRAL_BAJA_COBERTURA` de `web/src/datos.ts`).
+
 ### API de secciones y colonias (`web/worker/geografia.ts`)
 
 | Método y ruta | Qué hace |
 |---|---|
 | `GET /api/procesos` | Procesos con sus elecciones (el más reciente primero). |
-| `GET /api/municipios/:mid/secciones` | Lista paginada con cobertura. `?q=` (número), `?filtro=sin-operador\|huecos`, `?proceso=`, `?pagina=`, `?limite=` (máx. 100). Devuelve `{ total, filas }`. |
+| `GET /api/municipios/:mid/secciones` | Lista paginada con cobertura. `?q=` (número), `?filtro=sin-operador\|huecos\|baja-cobertura` (con `?umbral=`), `?proceso=`, `?pagina=`, `?limite=` (máx. 100). Devuelve `{ total, filas }`. |
 | `GET /api/municipios/:mid/secciones/:numero` | Detalle por número, con casillas y resultados por elección del proceso. |
 | `GET /api/secciones/:id/colonias` | Colonias de la sección con operadores, personas, enlaces y otras secciones. |
 | `GET /api/secciones/:id/historial` | Altas y bajas de asignaciones en la sección. |

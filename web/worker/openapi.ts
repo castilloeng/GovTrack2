@@ -59,6 +59,7 @@ export const openapi = {
     { name: 'Configuración', description: 'Ajustes globales del sitio.' },
     { name: 'Secciones', description: 'Secciones electorales, casillas y resultados.' },
     { name: 'Colonias', description: 'Colonias y su relación con las secciones.' },
+    { name: 'Panel', description: 'Indicadores del municipio, resultados y actividad reciente.' },
     { name: 'Estructura', description: 'Personas (padrón), operadores, enlaces y asignaciones. El rol se deduce de las relaciones.' },
   ],
   components: {
@@ -171,6 +172,51 @@ export const openapi = {
           operador: { type: 'string' },
           usuario: nullable('string'),
         },
+      },
+      Panel: {
+        type: 'object',
+        properties: {
+          secciones: { ...int, description: 'Secciones del municipio.' },
+          secciones_cubiertas: { ...int, description: 'Secciones con al menos una asignación vigente.' },
+          operadores: { ...int, description: 'Personas activas con asignaciones vigentes o enlaces.' },
+          colonias: { ...int, description: 'Colonias con al menos una asignación vigente.' },
+          enlaces: { ...int, description: 'Personas activas que son enlace de algún operador activo.' },
+          personas: { ...int, description: 'Personas movilizadas.' },
+          ln: { ...int, description: 'Lista nominal del municipio en el proceso.' },
+          proceso_id: nullable('integer'),
+          elecciones: {
+            type: 'array',
+            items: {
+              type: 'object',
+              description: 'Votación total del municipio en una elección del proceso.',
+              properties: {
+                id: int,
+                cargo: ref('Cargo'),
+                ln: { ...int, description: 'Lista nominal de las casillas con resultados (base de la participación).' },
+                votos: { ...int, description: 'Suma de votos de todos los partidos.' },
+                partidos: { type: 'array', description: 'De mayor a menor votación.', items: { type: 'object', properties: { siglas: { type: 'string' }, votos: int } } },
+              },
+            },
+          },
+        },
+      },
+      EventoActividad: {
+        type: 'object',
+        description: 'Alta o baja de asignación (`seccion`, `colonia`, `operador`; las bajas traen `sin_operador`) o importación (`archivo`, `destino`, `filas_ok`, `filas_error`).',
+        properties: {
+          tipo: { type: 'string', enum: ['alta', 'baja', 'importacion'] },
+          fecha: { type: 'string', format: 'date-time' },
+          usuario: nullable('string'),
+          seccion: int,
+          colonia: { type: 'string' },
+          operador: { type: 'string' },
+          sin_operador: { type: 'boolean', description: 'Solo en bajas: la sección no tiene hoy ningún operador.' },
+          archivo: { type: 'string' },
+          destino: { type: 'string' },
+          filas_ok: int,
+          filas_error: int,
+        },
+        required: ['tipo', 'fecha'],
       },
       ColoniaEntrada: {
         type: 'object',
@@ -326,12 +372,18 @@ export const openapi = {
         parameters: [
           MID,
           query('q', 'Prefijo del número de sección.'),
-          query('filtro', '`sin-operador`: sin ningún operador. `huecos`: con al menos una colonia sin operador.', { type: 'string', enum: ['sin-operador', 'huecos'] }),
+          query(
+            'filtro',
+            '`sin-operador`: sin ningún operador. `huecos`: con al menos una colonia sin operador. `baja-cobertura`: con operador, pero las personas movilizadas son menos del `umbral` % de la lista nominal.',
+            { type: 'string', enum: ['sin-operador', 'huecos', 'baja-cobertura'] },
+          ),
+          query('umbral', 'Porcentaje de la lista nominal para `filtro=baja-cobertura`.', { type: 'number', exclusiveMinimum: 0, maximum: 100, default: 3 }),
           query('proceso', 'Proceso para casillas y lista nominal; por omisión, el más reciente.', { type: 'integer' }),
           ...PAGINA,
         ],
         responses: {
           '200': json({ type: 'object', properties: { total: int, filas: { type: 'array', items: ref('SeccionFila') } } }),
+          '400': err('Umbral inválido.'),
           ...LECTURA_MUNICIPIO,
         },
       },
@@ -345,6 +397,24 @@ export const openapi = {
           required: ['numero'],
         }),
         responses: { '201': json({ type: 'object', properties: { id: int, numero: int } }, 'Creada'), ...ESCRITURA, '409': err('La sección ya existe en el municipio.') },
+      },
+    },
+    '/municipios/{mid}/panel': {
+      get: {
+        tags: ['Panel'],
+        summary: 'Indicadores y resultados del municipio',
+        description: 'KPI de cobertura y la votación total de cada elección del proceso.',
+        parameters: [MID, query('proceso', 'Por omisión, el más reciente.', { type: 'integer' })],
+        responses: { '200': json(ref('Panel')), ...LECTURA_MUNICIPIO },
+      },
+    },
+    '/municipios/{mid}/actividad': {
+      get: {
+        tags: ['Panel'],
+        summary: 'Actividad reciente',
+        description: 'Altas y bajas de asignaciones e importaciones del municipio, la más reciente primero.',
+        parameters: [MID, query('limite', 'Eventos a devolver.', { type: 'integer', minimum: 1, maximum: 50, default: 10 })],
+        responses: { '200': json({ type: 'array', items: ref('EventoActividad') }), ...LECTURA_MUNICIPIO },
       },
     },
     '/municipios/{mid}/secciones/{numero}': {

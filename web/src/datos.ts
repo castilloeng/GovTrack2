@@ -1,5 +1,5 @@
 // Datos de ejemplo tomados de los diseños aprobados (diseno/pantallas/*.dc.html).
-// Solo los usan las pantallas que aún no están conectadas a la API (Panel e Importar).
+// Solo los usan las pantallas que aún no están conectadas a la API (Importar).
 
 export type Rol = 'ADMIN' | 'CAPTURISTA' | 'CONSULTA'
 
@@ -11,48 +11,6 @@ export const ROL_NOMBRE: Record<Rol, string> = {
 
 /** Umbral de "baja cobertura" (personas / lista nominal). Debe ser configurable. */
 export const UMBRAL_BAJA_COBERTURA = 3
-
-// ---------- Panel ----------
-
-export const kpis = {
-  seccionesCubiertas: 112,
-  seccionesTotal: 148,
-  operadores: 386,
-  colonias: 214,
-  enlaces: 154,
-  personas: 9420,
-  pctListaNominal: 3.8,
-}
-
-export type SeccionCobertura = { num: string; colonias: number; operadores: number; personas: number; ln: number }
-
-export const coberturaSecciones: SeccionCobertura[] = [
-  { num: '0812', colonias: 6, operadores: 9, personas: 214, ln: 2980 },
-  { num: '0813', colonias: 4, operadores: 5, personas: 131, ln: 2410 },
-  { num: '0815', colonias: 3, operadores: 2, personas: 48, ln: 1905 },
-  { num: '0821', colonias: 7, operadores: 11, personas: 302, ln: 3640 },
-  { num: '0824', colonias: 5, operadores: 0, personas: 0, ln: 2155 },
-  { num: '0830', colonias: 2, operadores: 3, personas: 77, ln: 1320 },
-]
-
-export const resultadoMunicipio = {
-  titulo: 'Resultado 2024 · Ayuntamiento',
-  partidos: [
-    { nombre: 'Partido A', pct: 41.2 },
-    { nombre: 'Partido B', pct: 27.9 },
-    { nombre: 'Partido C', pct: 16.4 },
-    { nombre: 'Otros', pct: 14.5 },
-  ],
-  participacion: 58.6,
-}
-
-export type Actividad = { texto: string; cifra?: string; despues?: string; cuando: string; alerta?: boolean }
-
-export const actividadReciente: Actividad[] = [
-  { texto: 'Importación de casillas completada: ', cifra: '1,180', despues: ' filas', cuando: 'Hoy, 10:42 · Rosain Castillo' },
-  { texto: 'Nueva asignación en sección ', cifra: '0812', despues: ', Col. Centro', cuando: 'Hoy, 09:15 · Capturista' },
-  { texto: 'Sección ', cifra: '0824', despues: ' quedó sin operador', cuando: 'Ayer, 18:03', alerta: true },
-]
 
 // ---------- Importar ----------
 

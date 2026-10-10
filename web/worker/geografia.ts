@@ -68,7 +68,7 @@ geografia.get('/procesos', async (c) => {
 
 /**
  * Lista de secciones del municipio con su cobertura.
- * ?q= número (prefijo) · ?filtro=sin-operador|huecos · ?proceso= · ?pagina= · ?limite=
+ * ?q= número (prefijo) · ?filtro=sin-operador|huecos|baja-cobertura (con ?umbral=) · ?proceso= · ?pagina= · ?limite=
  */
 geografia.get('/municipios/:mid/secciones', async (c) => {
   const mid = idParam(c.req.param('mid'), 'municipio')
@@ -77,9 +77,13 @@ geografia.get('/municipios/:mid/secciones', async (c) => {
   const { limite, offset } = paginacion(c)
   const q = (c.req.query('q') ?? '').replace(/\D/g, '')
   const filtro = c.req.query('filtro')
+  // Baja cobertura: con operador, pero las personas movilizadas son menos del ?umbral= % (por omisión 3) de la lista nominal.
+  const umbral = Number(c.req.query('umbral') ?? 3)
+  if (filtro === 'baja-cobertura' && !(umbral > 0 && umbral <= 100)) throw new ErrorApi(400, 'umbral inválido; usa un porcentaje mayor que 0 y hasta 100')
   const condFiltro =
     filtro === 'sin-operador' ? 'AND coalesce(e.operadores, 0) = 0'
     : filtro === 'huecos' ? 'AND coalesce(e.colonias_cubiertas, 0) < coalesce(sc.colonias, 0)'
+    : filtro === 'baja-cobertura' ? 'AND coalesce(e.operadores, 0) > 0 AND coalesce(k.ln, 0) > 0 AND e.personas * 100.0 / k.ln < ?6'
     : ''
 
   const { results } = await c.env.DB.prepare(
@@ -105,7 +109,7 @@ geografia.get('/municipios/:mid/secciones', async (c) => {
      ORDER BY s.numero
      LIMIT ?4 OFFSET ?5`,
   )
-    .bind(mid, proceso, q, limite, offset)
+    .bind(mid, proceso, q, limite, offset, ...(filtro === 'baja-cobertura' ? [umbral] : []))
     .all<Record<string, unknown> & { total: number }>()
 
   return c.json({ total: results[0]?.total ?? 0, filas: results.map(({ total: _, ...r }) => r) })

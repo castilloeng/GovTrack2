@@ -152,3 +152,19 @@ export type PersonaDetalle = PersonaBreve & {
   asignaciones: Asignacion[]
   enlace_de: { id: number; nombre: string }[]
 }
+
+export type PanelDatos = {
+  secciones: number
+  secciones_cubiertas: number
+  operadores: number
+  colonias: number
+  enlaces: number
+  personas: number
+  ln: number
+  proceso_id: number | null
+  elecciones: { id: number; cargo: string; ln: number; votos: number; partidos: { siglas: string; votos: number }[] }[]
+}
+
+export type EventoActividad =
+  | { tipo: 'alta' | 'baja'; fecha: string; seccion: number; colonia: string; operador: string; usuario: string | null; sin_operador?: boolean }
+  | { tipo: 'importacion'; fecha: string; usuario: string | null; archivo: string; destino: string; filas_ok: number; filas_error: number }

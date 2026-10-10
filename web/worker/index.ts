@@ -4,6 +4,7 @@ import { ErrorApi, usuarioActual, type Env } from './comun'
 import estructura from './estructura'
 import geografia from './geografia'
 import { openapi, sinDocumentar } from './openapi'
+import panel from './panel'
 
 const TEMAS = ['verde', 'azul', 'naranja', 'guinda']
 
@@ -80,6 +81,9 @@ app.route('/', geografia)
 
 // Operadores, enlaces, personas y asignaciones.
 app.route('/', estructura)
+
+// Panel del municipio: indicadores, resultados y actividad reciente.
+app.route('/', panel)
 
 app.notFound((c) => c.json({ error: 'Ruta no encontrada' }, 404))
 
