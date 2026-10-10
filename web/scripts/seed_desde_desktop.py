@@ -14,6 +14,12 @@ Con --solo-catalogos genera únicamente secciones, colonias, proceso, casillas y
 personas, enlaces ni asignaciones, y sin borrar esas tablas). Es lo que se cargó en la D1 remota:
     python scripts/seed_desde_desktop.py --solo-catalogos > .wrangler/catalogos.sql
     npx wrangler d1 execute govtrack --remote --file .wrangler/catalogos.sql
+
+Con --solo-estructura genera únicamente personas, enlaces y asignaciones (borrando antes solo esas
+tablas). Supone que los catálogos ya se cargaron con este script: los ids de sección y colonia se
+calculan igual en cada corrida.
+    python scripts/seed_desde_desktop.py --solo-estructura > .wrangler/estructura.sql
+    npx wrangler d1 execute govtrack --remote --file .wrangler/estructura.sql
 """
 
 import json
@@ -61,6 +67,7 @@ def entero(v):
 
 def main():
     solo_catalogos = '--solo-catalogos' in sys.argv[1:]
+    solo_estructura = '--solo-estructura' in sys.argv[1:]
     db = sqlite3.connect(ORIGEN)
     out = []
     w = out.append
@@ -130,6 +137,7 @@ def main():
         w(f'INSERT INTO resultado (casilla_id, eleccion_id, partido_id, votos) VALUES ({cid}, {ELECCION[0]}, {pid}, {v});')
 
     # ---------- Personas (únicas por nombre), enlaces y asignaciones ----------
+    inicio_estructura = len(out)
     personas = {}  # nombre -> id
     telefonos = set()
     asignaciones = set()
@@ -176,6 +184,9 @@ def main():
         w(f'INSERT INTO operador_asignacion (operador_id, seccion_id, colonia_id, num_personas, observaciones) VALUES '
           f'({oid}, {sid}, {cid}, {entero(npers)}, {q((obs or "").strip() or None)});')
 
+    if solo_estructura:
+        out = ['-- Generado por scripts/seed_desde_desktop.py --solo-estructura'] +             [f'DELETE FROM {t};' for t in ('operador_asignacion', 'operador_enlace', 'persona')] + out[inicio_estructura:]
+        secciones, colonias, casillas = {}, {}, {}
     emitir(out, secciones, colonias, casillas, personas, asignaciones)
 
 

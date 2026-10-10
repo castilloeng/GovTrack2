@@ -18,8 +18,9 @@ function Pantalla({ ruta }: { ruta: string }) {
   if (ruta === '/operadores') return <Operadores />
   if ((m = ruta.match(/^\/operadores\/(\d+)$/))) return <Operadores id={Number(m[1])} />
   if ((m = ruta.match(/^\/secciones\/(\d{1,4})$/))) return <Seccion key={m[1]} numero={Number(m[1])} />
-  if (ruta === '/secciones' || ruta === '/resultados') return <Secciones vista="secciones" />
-  if (ruta === '/colonias') return <Secciones vista="colonias" />
+  // `key` por vista: cada una se monta de cero y nunca pinta las filas de la otra mientras carga.
+  if (ruta === '/secciones' || ruta === '/resultados') return <Secciones key="secciones" vista="secciones" />
+  if (ruta === '/colonias') return <Secciones key="colonias" vista="colonias" />
   if (ruta === '/importaciones') return <Importar />
   if (ruta === '/configuracion') return <Configuracion />
   if (ruta === '/api-docs') return <ApiDocs />

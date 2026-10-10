@@ -53,7 +53,6 @@ export default function Secciones({ vista }: { vista: Vista }) {
   }, [texto])
   // Cambiar de vista, municipio, búsqueda o filtro regresa a la primera página.
   useEffect(() => setPagina(1), [vista, municipioId, q, filtro, limite])
-  useEffect(() => setFiltro(''), [vista])
 
   const params = new URLSearchParams({ pagina: String(pagina), limite: String(limite) })
   if (q) params.set('q', q)
