@@ -32,6 +32,11 @@ export const IcoLista = ({ size }: P) => (
     <path d="M4 6h16M4 12h16M4 18h10" />
   </Svg>
 )
+export const IcoCodigo = ({ size }: P) => (
+  <Svg size={size}>
+    <path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" />
+  </Svg>
+)
 export const IcoMapa = ({ size }: P) => (
   <Svg size={size}>
     <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" />

@@ -1,30 +1,29 @@
-import { Hono, type Context } from 'hono'
-
-type Bindings = {
-  DB: D1Database
-  // Solo para desarrollo local (en .dev.vars) mientras no exista el login con Google.
-  USUARIO_PRUEBA_EMAIL?: string
-}
-
-type Usuario = { id: number; email: string; nombre: string; rol: string }
+import { Hono } from 'hono'
+import { ErrorApi, usuarioActual, type Env } from './comun'
+import geografia from './geografia'
+import { openapi, sinDocumentar } from './openapi'
 
 const TEMAS = ['verde', 'azul', 'naranja', 'guinda']
 
-const app = new Hono<{ Bindings: Bindings }>().basePath('/api')
+const app = new Hono<Env>().basePath('/api')
 
-/**
- * Usuario de la petición. Mientras no exista el login con Google se identifica por el email que
- * agrega Cloudflare Access o, en local, por USUARIO_PRUEBA_EMAIL. Solo entran usuarios activos.
- */
-async function usuarioActual(c: Context<{ Bindings: Bindings }>): Promise<Usuario | null> {
-  const email = c.req.header('Cf-Access-Authenticated-User-Email') ?? c.env.USUARIO_PRUEBA_EMAIL
-  if (!email) return null
-  return c.env.DB.prepare('SELECT id, email, nombre, rol FROM usuario WHERE email = ? AND activo = 1')
-    .bind(email)
-    .first<Usuario>()
-}
+// Si una petición con cuerpo se rechaza antes de leerlo (401/403), el dev server local (miniflare)
+// deja la conexión en mal estado y la siguiente petición falla con 500. Se consume siempre.
+app.use(async (c, next) => {
+  await next()
+  if (c.req.raw.body && !c.req.raw.bodyUsed) await c.req.raw.arrayBuffer().catch(() => undefined)
+})
+
+app.onError((e, c) => {
+  if (e instanceof ErrorApi) return c.json({ error: e.message }, e.status)
+  console.error(e)
+  return c.json({ error: 'Error interno' }, 500)
+})
 
 app.get('/health', (c) => c.json({ ok: true }))
+
+// Documentación OpenAPI (worker/openapi.ts). `x-sin-documentar` avisa de rutas que faltan en la especificación.
+app.get('/openapi.json', (c) => c.json({ ...openapi, 'x-sin-documentar': sinDocumentar(app.routes) }))
 
 app.get('/municipios', async (c) => {
   const { results } = await c.env.DB.prepare(
@@ -62,5 +61,10 @@ app.put('/configuracion/tema', async (c) => {
     .run()
   return c.json({ tema: body.tema })
 })
+
+// Procesos, secciones y colonias.
+app.route('/', geografia)
+
+app.notFound((c) => c.json({ error: 'Ruta no encontrada' }, 404))
 
 export default app

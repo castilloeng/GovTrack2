@@ -43,7 +43,8 @@ Se va a pasar de la app de escritorio a una **aplicación web multiusuario** sob
 ```
 web/
 ├── src/                 # Frontend React (TypeScript)
-├── worker/index.ts      # Worker: API con Hono bajo /api/*
+├── worker/             # Worker: API con Hono bajo /api/* (index.ts, comun.ts, geografia.ts, openapi.ts)
+├── scripts/            # Utilidades locales (p. ej. seed_desde_desktop.py)
 ├── migrations/          # Migraciones D1 (0001_esquema_inicial.sql = esquema completo)
 ├── index.html           # Entrada de Vite
 ├── vite.config.ts       # Vite + @cloudflare/vite-plugin (dev local con runtime de Workers)
@@ -71,6 +72,12 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 
 - `migrations/` sigue la convención de `wrangler d1 migrations`. Los archivos se numeran (`NNNN_descripcion.sql`) y **no se editan una vez aplicados en D1 remoto**: cualquier cambio va en una migración nueva.
 - Los datos de prueba locales se cargan con `npx wrangler d1 execute govtrack --local --command "..."`, no como migraciones.
+- Para cargar en la D1 local los datos de la app de escritorio (secciones, colonias, casillas, resultados, personas, enlaces y asignaciones):
+  ```bash
+  python scripts/seed_desde_desktop.py > .wrangler/seed.sql
+  npx wrangler d1 execute govtrack --local --file .wrangler/seed.sql
+  ```
+  El SQL borra antes esas tablas (no toca `usuario` ni `configuracion`). Crea el proceso 2024 con la elección de Ayuntamiento.
 - La BD remota `govtrack` ya existe en Cloudflare (su `database_id` está en `wrangler.jsonc`). El binding se llama `DB` (el Worker usa `c.env.DB`); no cambiarlo aunque `wrangler d1 create` sugiera otro nombre.
 - `.claude/launch.json` (en la raíz del repo) define el servidor `govtrack-web` para la vista previa.
 
@@ -123,7 +130,33 @@ npm run deploy              # build + wrangler deploy (publica en Cloudflare)
 
 ### Pendiente
 
-- Login con Google y control de acceso por rol/municipio en la API. Hoy existen `/api/health`, `/api/municipios`, `GET /api/me`, `GET /api/configuracion` y `PUT /api/configuracion/tema` (solo ADMIN). Mientras no haya login, `usuarioActual()` (`web/worker/index.ts`) identifica al usuario por el header de Cloudflare Access `Cf-Access-Authenticated-User-Email` o, en local, por `USUARIO_PRUEBA_EMAIL` en `web/.dev.vars` (no se versiona). Ese usuario debe existir y estar activo en la tabla `usuario`.
-- Script de carga de catálogos desde `desktop/db/GovTrackDB.db` o Excel.
-- Conectar el frontend a la API. Las pantallas de `diseno/pantallas/` (más Configuración) ya están maquetadas en `web/src/paginas/`, pero usan los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
+- Login con Google. Hoy existen `/api/health`, `/api/municipios`, `GET /api/me`, `GET /api/configuracion`, `PUT /api/configuracion/tema` (solo ADMIN) y las rutas de secciones y colonias (abajo). Mientras no haya login, `usuarioActual()` (`web/worker/index.ts`) identifica al usuario por el header de Cloudflare Access `Cf-Access-Authenticated-User-Email` o, en local, por `USUARIO_PRUEBA_EMAIL` en `web/.dev.vars` (no se versiona). Ese usuario debe existir y estar activo en la tabla `usuario`.
+- Carga de catálogos desde Excel (desde el SQLite de escritorio ya existe `web/scripts/seed_desde_desktop.py`).
+- Conectar el resto del frontend a la API. **Secciones y colonias** (`/secciones`, `/colonias`, `/secciones/:numero`) y los selectores de municipio y proceso ya usan la API; Panel, Operadores e Importar siguen con los datos de ejemplo de `web/src/datos.ts`. El ruteo es un router mínimo propio (`web/src/router.tsx`) sobre la History API.
 - Diseñar e implementar Asignaciones y Usuarios (hoy muestran "pendiente de diseño").
+
+### Documentación de la API (OpenAPI)
+
+- **Toda ruta de la API que se cree o modifique se documenta en `web/worker/openapi.ts` en el mismo cambio**: ruta, método, parámetros, cuerpo, respuestas (incluidos los errores) y esquemas. Si se elimina una ruta, se quita también de la especificación.
+- La especificación (OpenAPI 3.1) se sirve en `GET /api/openapi.json` y se consulta en **Administración → API** (`/api-docs`, solo ADMIN), que permite descargarla.
+- `/api/openapi.json` compara la especificación con las rutas registradas en el Worker (`app.routes`) y lista las que faltan en `x-sin-documentar`; la pantalla las muestra como alerta. Antes de terminar un cambio a la API, verifica que esa lista esté vacía.
+- Para validarla: `npx @redocly/cli lint http://localhost:5173/api/openapi.json` (o sobre un archivo descargado).
+
+### API de secciones y colonias (`web/worker/geografia.ts`)
+
+| Método y ruta | Qué hace |
+|---|---|
+| `GET /api/procesos` | Procesos con sus elecciones (el más reciente primero). |
+| `GET /api/municipios/:mid/secciones` | Lista paginada con cobertura. `?q=` (número), `?filtro=sin-operador\|huecos`, `?proceso=`, `?pagina=`, `?limite=` (máx. 100). Devuelve `{ total, filas }`. |
+| `GET /api/municipios/:mid/secciones/:numero` | Detalle por número, con casillas y resultados por elección del proceso. |
+| `GET /api/secciones/:id/colonias` | Colonias de la sección con operadores, personas, enlaces y otras secciones. |
+| `GET /api/secciones/:id/historial` | Altas y bajas de asignaciones en la sección. |
+| `GET /api/municipios/:mid/colonias` | Lista paginada. `?q=` (nombre, CP o número de sección), `?filtro=sin-operador`. |
+| `POST /api/municipios/:mid/secciones` | Alta `{ numero, tipo?, sector? }`. |
+| `PATCH /api/secciones/:id` | Cambia `tipo` y `sector`. |
+| `POST /api/municipios/:mid/colonias` | Alta `{ nombre, tipo_asentamiento?, cp?, secciones?: number[] }` (números de sección). |
+| `PATCH /api/colonias/:id` | Cambia `nombre`, `tipo_asentamiento` y `cp`. |
+| `PUT` / `DELETE /api/secciones/:id/colonias/:cid` | Agrega o quita la colonia de la sección (no se quita si tiene asignaciones, aunque estén dadas de baja). |
+
+- Acceso (`accesoMunicipio()` en `worker/comun.ts`): las escrituras exigen ADMIN o CAPTURISTA; un usuario que no es ADMIN solo accede a sus municipios (`usuario_municipio`). Mientras no haya login, las lecturas sin usuario siguen abiertas, como `/api/municipios`.
+- Los errores de la API responden `{ error }` con su código HTTP (`ErrorApi`).

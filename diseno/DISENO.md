@@ -30,7 +30,7 @@ Esta es la **referencia obligatoria** para construir cualquier interfaz de la ve
   - **General**: Panel
   - **Estructura**: Operadores y enlaces · Asignaciones
   - **Geografía y elección**: Secciones y colonias · Resultados
-  - **Administración**: Importaciones · Usuarios · **Configuración** (ver §6)
+  - **Administración**: Importaciones · Usuarios · **Configuración** (ver §6) · API
   - Las opciones se muestran según el rol: `CONSULTA` no ve Administración ni los botones de alta/edición; `CAPTURISTA` no ve Usuarios ni Configuración.
 - **Barra superior** blanca: selector de municipio, selector de proceso, búsqueda global (en el Panel) y, a la derecha, el usuario con su rol.
 - **Contenido** (`flex: 999 1 560px`, `max-width` de 1200–1280 px, `padding: 28px`). La pantalla empieza con un título h1 y una descripción corta, y las acciones van a la derecha (la acción principal es el botón relleno).
@@ -128,6 +128,25 @@ Se implementan como variables CSS en `:root`. Los valores de color dependen del 
 - La tabla de votos por casilla tiene **columnas dinámicas**: una por cada partido de la elección, más Total y Participación, y un pie de totales.
 - La distribución muestra las barras por partido, la ventaja del primero sobre el segundo y las personas movilizadas en la sección.
 - La tabla "Estructura en la sección" lista las colonias con sus operadores, personas y enlaces, y marca las colonias sin operador.
+
+- La URL lleva el número de sección (`/secciones/1265`) y se resuelve dentro del municipio elegido en la barra superior. Si la sección no existe en ese municipio, se muestra un aviso con enlace a la lista.
+- La pestaña Colonias muestra, por colonia, el CP y las otras secciones a las que pertenece ("También en"). ADMIN y CAPTURISTA ven "+ Agregar colonia" (busca en el catálogo del municipio o crea una nueva) y "Quitar" por fila; no se puede quitar una colonia que tenga asignaciones en la sección.
+- "Editar" junto al título cambia el tipo y el sector de la sección.
+
+### Secciones y colonias (sin maqueta; compuesta con §2–§4)
+- Pantalla de catálogo con dos pestañas, cada una con su URL: **Secciones** (`/secciones`) y **Colonias** (`/colonias`).
+- Encima de la tabla van la búsqueda y los segmentos de filtro. Secciones: Todas · Sin operador · Con colonias sin operador; se busca por número. Colonias: Todas · Sin operador; se busca por nombre, CP o número de sección.
+- Tabla de secciones: Sección (enlace al detalle), Tipo, Colonias (cubiertas / total), Operadores, Personas, Casillas, Lista nominal y Estado. El estado es "Cubierta", "Sin operador" o "*n* sin operador" (colonias sin cubrir), siempre con etiqueta.
+- Tabla de colonias: Colonia (con su tipo de asentamiento debajo), CP, Secciones (enlaces), Operadores, Personas, Estado y la acción "Editar" para ADMIN y CAPTURISTA.
+- La acción principal es "Nueva sección" o "Nueva colonia" según la pestaña; los formularios se abren en una hoja (diálogo en iPad y escritorio).
+- Las tablas se paginan desde la API (25 filas en celular, 50 desde iPad) con "Anterior / Siguiente" en el pie.
+- Los nombres de colonias se guardan y muestran en mayúsculas, como el catálogo del INE; municipios y tipos se muestran con mayúscula inicial.
+
+### API (Administración, sin maqueta)
+- Solo ADMIN. Muestra la especificación OpenAPI de `/api/openapi.json` con los componentes del sitio (no Swagger UI), para respetar los tokens y el tema.
+- Encabezado con la versión y la acción "Descargar OpenAPI". Si hay rutas sin documentar, se muestra una alerta con la lista.
+- Búsqueda por ruta, método o descripción; una tarjeta por grupo (tag) y cada ruta como fila desplegable con el método en etiqueta (GET normal, DELETE de alerta, el resto gris), la ruta en mono y el resumen.
+- Al desplegar: descripción, parámetros, cuerpo y respuestas; los esquemas se listan al final y los tipos enlazan a ellos.
 
 ### Importar desde Excel (`Importar.dc.html`)
 - Es un asistente de 4 pasos: **Archivo → Columnas → Validación → Confirmar**. Los tipos de carga son secciones, colonias, casillas con lista nominal y resultados por casilla.

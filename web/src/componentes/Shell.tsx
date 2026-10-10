@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useRuta } from '../router'
-import { municipios, procesos, ROL_NOMBRE, usuarioActual, type Rol } from '../datos'
-import { iniciales } from '../formato'
+import { ROL_NOMBRE, usuarioActual as usuarioEjemplo, type Rol } from '../datos'
+import { iniciales, nombrePropio } from '../formato'
 import {
   IcoAjustes,
   IcoBarras,
   IcoBuscar,
+  IcoCodigo,
   IcoDescarga,
   IcoFlecha,
   IcoLista,
@@ -17,7 +18,7 @@ import {
   IcoUsuario,
   IcoAtras,
 } from '../iconos'
-import { useContexto } from './Contexto'
+import { nombreProceso, useContexto } from './Contexto'
 import Hoja from './Hoja'
 
 type Item = { to: string; texto: string; icono: ReactNode; activo: (ruta: string) => boolean; roles?: Rol[] }
@@ -37,7 +38,7 @@ const MENU: Grupo[] = [
   {
     titulo: 'Geografía y elección',
     items: [
-      { to: '/secciones/0812', texto: 'Secciones y colonias', icono: <IcoMapa />, activo: empieza('/secciones') },
+      { to: '/secciones', texto: 'Secciones y colonias', icono: <IcoMapa />, activo: (r) => empieza('/secciones')(r) || empieza('/colonias')(r) },
       { to: '/resultados', texto: 'Resultados', icono: <IcoBarras />, activo: empieza('/resultados') },
     ],
   },
@@ -48,11 +49,11 @@ const MENU: Grupo[] = [
       { to: '/importaciones', texto: 'Importaciones', icono: <IcoDescarga />, activo: empieza('/importaciones') },
       { to: '/usuarios', texto: 'Usuarios', icono: <IcoUsuario />, activo: empieza('/usuarios'), roles: ['ADMIN'] },
       { to: '/configuracion', texto: 'Configuración', icono: <IcoAjustes />, activo: empieza('/configuracion'), roles: ['ADMIN'] },
+      { to: '/api-docs', texto: 'API', icono: <IcoCodigo />, activo: empieza('/api-docs'), roles: ['ADMIN'] },
     ],
   },
 ]
 
-const puede = (roles: Rol[] | undefined) => !roles || roles.includes(usuarioActual.rol)
 
 /** Layout común: barra lateral (cajón en celular, riel en iPad, completa en escritorio) + barra superior. */
 export default function Shell({ children, busqueda = false }: { children: ReactNode; busqueda?: boolean }) {
@@ -60,7 +61,10 @@ export default function Shell({ children, busqueda = false }: { children: ReactN
   const [navAbierta, setNavAbierta] = useState(false)
   const [hojaContexto, setHojaContexto] = useState(false)
   const [buscando, setBuscando] = useState(false)
-  const { municipio, proceso, setMunicipio, setProceso } = useContexto()
+  const { municipio, proceso, municipios, procesos, municipioId, procesoId, setMunicipioId, setProcesoId, usuario } = useContexto()
+  // Sin login todavía: si /api/me no responde se muestra el usuario de ejemplo.
+  const usuarioActual = usuario ?? usuarioEjemplo
+  const puede = (roles: Rol[] | undefined) => !roles || roles.includes(usuarioActual.rol)
 
   // El cajón se cierra al elegir una opción.
   useEffect(() => setNavAbierta(false), [ruta])
@@ -118,18 +122,18 @@ export default function Shell({ children, busqueda = false }: { children: ReactN
             <IcoPin />
             {municipio}
             <IcoFlecha />
-            <select aria-label="Cambiar municipio" value={municipio} onChange={(e) => setMunicipio(e.target.value)}>
+            <select aria-label="Cambiar municipio" value={municipioId ?? ''} onChange={(e) => setMunicipioId(Number(e.target.value))}>
               {municipios.map((m) => (
-                <option key={m}>{m}</option>
+                <option key={m.id} value={m.id}>{nombrePropio(m.nombre)}</option>
               ))}
             </select>
           </label>
           <label className="btn btn-select desde-tablet">
             {proceso}
             <IcoFlecha />
-            <select aria-label="Cambiar proceso electoral" value={proceso} onChange={(e) => setProceso(e.target.value)}>
+            <select aria-label="Cambiar proceso electoral" value={procesoId ?? ''} onChange={(e) => setProcesoId(Number(e.target.value))}>
               {procesos.map((p) => (
-                <option key={p}>{p}</option>
+                <option key={p.id} value={p.id}>{nombreProceso(p)}</option>
               ))}
             </select>
           </label>
@@ -165,17 +169,17 @@ export default function Shell({ children, busqueda = false }: { children: ReactN
         <Hoja titulo="Municipio y proceso" onCerrar={() => setHojaContexto(false)}>
           <label className="campo">
             Municipio
-            <select value={municipio} onChange={(e) => setMunicipio(e.target.value)}>
+            <select value={municipioId ?? ''} onChange={(e) => setMunicipioId(Number(e.target.value))}>
               {municipios.map((m) => (
-                <option key={m}>{m}</option>
+                <option key={m.id} value={m.id}>{nombrePropio(m.nombre)}</option>
               ))}
             </select>
           </label>
           <label className="campo">
             Proceso electoral
-            <select value={proceso} onChange={(e) => setProceso(e.target.value)}>
+            <select value={procesoId ?? ''} onChange={(e) => setProcesoId(Number(e.target.value))}>
               {procesos.map((p) => (
-                <option key={p}>{p}</option>
+                <option key={p.id} value={p.id}>{nombreProceso(p)}</option>
               ))}
             </select>
           </label>
